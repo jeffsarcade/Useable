@@ -1,0 +1,653 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Grading Sprints</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: one centered column: setup form, then the big clock while grading. */
+:root{
+  --bg:#EDF0F5; --surface:#FFFFFF; --sunk:#E3E8EF; --ink:#131B27; --muted:#586377; --line:#D3DAE4;
+  --accent:#2352C9; --accent-ink:#FFFFFF; --accent-soft:#DDE6FB;
+  --good:#1C7A4B; --good-soft:#D7EFE2; --warn:#A45604; --warn-soft:#FAE8D0; --bad:#BF3129; --bad-soft:#F8DBD9;
+  --f-display:"Bricolage Grotesque","Avenir Next",system-ui,sans-serif;
+  --f-body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-num:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E131B; --surface:#161D28; --sunk:#1D2533; --ink:#E5EAF2; --muted:#94A0B4; --line:#2A3445;
+  --accent:#7FA3FF; --accent-ink:#0B1222; --accent-soft:#1F2C4D;
+  --good:#4FC48C; --good-soft:#15342A; --warn:#F2A54C; --warn-soft:#3A2A16; --bad:#FF6F66; --bad-soft:#3E1D1D;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E131B; --surface:#161D28; --sunk:#1D2533; --ink:#E5EAF2; --muted:#94A0B4; --line:#2A3445;
+  --accent:#7FA3FF; --accent-ink:#0B1222; --accent-soft:#1F2C4D;
+  --good:#4FC48C; --good-soft:#15342A; --warn:#F2A54C; --warn-soft:#3A2A16; --bad:#FF6F66; --bad-soft:#3E1D1D;
+  color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:20px;padding-block:18px 48px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.15}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.label{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+
+/* top bar */
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.brand{display:flex;align-items:baseline;gap:4px 10px;flex-wrap:wrap}
+.brand h1{white-space:nowrap}
+.brand h1{font-size:24px;font-weight:800;letter-spacing:-.01em}
+.brand h1 span{color:var(--accent)}
+.brand small{color:var(--muted)}
+.top .actions{display:flex;gap:8px;flex-wrap:wrap}
+
+/* buttons */
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:8px}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.big{padding:14px 22px;font-size:17px;border-radius:10px}
+.btn.ghost{background:transparent}
+.btn.huge{flex:1 1 100%;justify-content:center;padding:26px 24px;font-size:26px;font-family:var(--f-display);font-weight:700;border-radius:14px;min-height:88px}
+.btn.huge kbd{font-size:13px;padding:1px 7px}
+.btn.danger{color:var(--bad)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+kbd{font-family:var(--f-num);font-size:11px;border:1px solid currentColor;border-radius:4px;padding:0 5px;opacity:.7}
+
+/* grid */
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:20px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.side{display:flex;flex-direction:column;gap:16px;min-width:0}
+.panel h2{font-size:18px;font-weight:700}
+.panel-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+.linkbtn{background:none;border:0;color:var(--accent);cursor:pointer;font-weight:600;padding:2px 4px;font-size:13.5px}
+
+/* setup */
+.setup h2{font-size:28px;font-weight:800;margin-bottom:4px}
+.setup .lede{color:var(--muted);margin:0 0 18px;max-width:60ch}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 16px}
+@media (max-width:560px){.fields{grid-template-columns:minmax(0,1fr)}}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field.full{grid-column:1/-1}
+.field label{font-weight:600;font-size:13.5px}
+.field .hint{font-size:12.5px;color:var(--muted)}
+input[type=text],input[type=number],input[type=time],textarea{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 11px;width:100%}
+input[type=number],input[type=time]{font-family:var(--f-num)}
+.hint.err{color:var(--bad);font-weight:600}
+.btn.primary:disabled{filter:grayscale(.6)}
+.dual{display:grid;grid-template-columns:92px minmax(0,1fr);gap:14px;align-items:center}
+input[type=range]{width:100%;accent-color:var(--accent);height:28px;margin:0;cursor:pointer}
+.ticks{display:flex;justify-content:space-between;font-family:var(--f-num);font-size:11px;color:var(--muted);margin-left:106px;margin-top:-4px}
+textarea{resize:vertical;min-height:120px;line-height:1.45}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--bg)}
+.seg label{padding:8px 12px;cursor:pointer;font-weight:600;font-size:13.5px}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label:has(input:checked){background:var(--accent);color:var(--accent-ink)}
+.seg label:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:-2px}
+.checks{display:flex;gap:18px;flex-wrap:wrap}
+.checks label{display:flex;gap:7px;align-items:center;cursor:pointer}
+.preview{margin-top:20px;padding:16px;border-radius:8px;background:var(--sunk);display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:560px){.preview{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.preview .v{font-family:var(--f-num);font-size:20px;font-weight:700}
+.startrow{display:flex;gap:12px;align-items:center;margin-top:18px;flex-wrap:wrap}
+.startrow .note{color:var(--muted);font-size:13px}
+.resume{background:var(--accent-soft);border:1px solid var(--accent);border-radius:var(--r);padding:14px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:16px}
+
+
+/* stage */
+.stage{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;position:relative;overflow:hidden;min-width:0}
+.stage-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.paperof{font-family:var(--f-display);font-size:22px;font-weight:700}
+.paperof small{font-family:var(--f-body);font-weight:500;color:var(--muted);font-size:14px;display:block}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;font-weight:700;font-size:13.5px;font-family:var(--f-num)}
+.chip.good{background:var(--good-soft);color:var(--good)}
+.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.chip.bad{background:var(--bad-soft);color:var(--bad)}
+.chip.neutral{background:var(--sunk);color:var(--muted)}
+.clock{font-family:var(--f-num);font-weight:700;font-size:clamp(72px,15vw,168px);line-height:1;letter-spacing:-.04em;margin:22px 0 6px;font-variant-numeric:tabular-nums}
+.clock.over{color:var(--bad)}
+.clock.near{color:var(--warn)}
+.clock.brk{color:var(--good)}
+.clocksub{color:var(--muted);font-size:15px;min-height:1.5em}
+.meter{height:8px;background:var(--sunk);border-radius:99px;overflow:hidden;margin-top:14px}
+.meter i{display:block;height:100%;width:0;background:var(--accent);border-radius:99px;transition:width .25s linear}
+.meter.over i{background:var(--bad)}
+.meter.brk i{background:var(--good)}
+.banner{margin-top:16px;padding:11px 14px;border-radius:8px;font-weight:600;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.banner.warn{background:var(--warn-soft);color:var(--warn)}
+.banner.bad{background:var(--bad-soft);color:var(--bad)}
+.banner.good{background:var(--good-soft);color:var(--good)}
+.controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:22px}
+@media (max-width:620px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stats > div{background:var(--surface);padding:12px 14px;min-width:0}
+.stats .v{font-family:var(--f-num);font-size:19px;font-weight:700;margin-top:2px}
+.stats .s{font-size:12px;color:var(--muted)}
+
+/* the paper stack */
+.stackhead{display:flex;justify-content:space-between;align-items:center;margin-top:22px;gap:10px;flex-wrap:wrap}
+.adj{display:flex;gap:6px;align-items:center}
+.adj button{width:28px;height:28px;border-radius:6px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-weight:700}
+.stack{display:flex;flex-wrap:wrap;gap:4px;margin-top:10px}
+.stack span{width:16px;height:22px;border-radius:3px;background:var(--sunk);border:1px solid var(--line)}
+.stack span.g{background:var(--good);border-color:var(--good)}
+.stack span.w{background:var(--warn);border-color:var(--warn)}
+.stack span.b{background:var(--bad);border-color:var(--bad)}
+.stack span.cur{border:2px solid var(--accent);background:var(--accent-soft)}
+.progress{margin-top:18px}
+.progress-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px}
+.pct{font-family:var(--f-num);font-weight:700;font-size:26px;line-height:1}
+.pct small{font-size:13px;color:var(--muted);font-weight:500;margin-left:8px;font-family:var(--f-body)}
+.pbar{position:relative;height:18px;background:var(--sunk);border-radius:99px}
+.pbar .fill{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:99px;width:0;transition:width .4s ease}
+.pbar .mark{position:absolute;top:-5px;width:3px;height:28px;background:var(--ink);border-radius:2px;left:0}
+@media (prefers-reduced-motion:reduce){.pbar .fill{transition:none}}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+
+.small{font-size:12.5px;color:var(--muted);margin:8px 0 0}
+
+/* summary */
+.sumhead h2{font-size:30px;font-weight:800}
+.sumhead p{color:var(--muted);margin:4px 0 0}
+.chartbox{overflow-x:auto;margin-top:18px}
+.chartbox svg{display:block;width:100%;min-width:420px;height:auto}
+.bar-g{fill:var(--good)}.bar-w{fill:var(--warn)}.bar-b{fill:var(--bad)}
+.tline{stroke:var(--ink);stroke-dasharray:4 4;stroke-width:1.5}
+.ctext{fill:var(--muted);font-family:var(--f-num);font-size:11px}
+.gridl{stroke:var(--line);stroke-width:1}
+
+/* flash + toast */
+.top,#vSetup,#vSession,#vSummary{max-width:860px;margin-inline:auto}
+.flash{position:fixed;inset:0;pointer-events:none;background:var(--accent);opacity:0;z-index:50}
+.flash.go{animation:fl .9s ease-out}
+@keyframes fl{0%{opacity:.35}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.flash.go{animation:none}.meter i{transition:none}}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:8px;font-weight:600;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:60;max-width:calc(100% - 32px)}
+.toast.show{opacity:1}
+.keys{color:var(--muted);font-size:12.5px;margin-top:14px;display:flex;gap:14px;flex-wrap:wrap}
+</style>
+
+<div class="flash" id="flash"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><h1>Grading <span>Sprints</span></h1><small>Timed pacing for a stack of papers</small></div>
+    <div class="actions">
+      <button class="btn ghost" id="focusBtn" hidden title="Full screen (F)">Full screen <kbd>F</kbd></button>
+    </div>
+  </header>
+
+  <!-- SETUP -->
+  <div id="vSetup">
+    <div>
+      <div class="resume" id="resumeBox" hidden>
+        <div><strong>Session in progress</strong><div id="resumeText" class="small" style="margin:0"></div></div>
+        <div style="display:flex;gap:8px"><button class="btn primary" id="resumeBtn">Resume</button><button class="btn" id="discardBtn">Discard</button></div>
+      </div>
+      <section class="panel setup">
+        <h2>Set up your stack</h2>
+        <p class="lede">Tell it how many papers you have and how fast you want to move. It splits the work into sprints with short breaks, and keeps a per-paper clock so no single essay eats your hour.</p>
+        <form id="setupForm" autocomplete="off">
+          <div class="fields">
+            <div class="field">
+              <label for="fPapers">Papers in the stack</label>
+              <div class="dual"><input type="number" id="fPapers" min="1" max="400" value="32"><input type="range" id="rPapers" min="1" max="200" step="1" aria-label="Papers in the stack slider"></div>
+              <div class="ticks" aria-hidden="true"><span>1</span><span>200</span></div>
+            </div>
+            <div class="field">
+              <label>Set pace by</label>
+              <div class="seg" role="radiogroup">
+                <label><input type="radio" name="mode" id="mPer" value="per" checked>Per paper</label>
+                <label><input type="radio" name="mode" id="mTot" value="total">Total time</label>
+                <label><input type="radio" name="mode" id="mDue" value="due">Done by</label>
+              </div>
+            </div>
+            <div class="field" id="perWrap">
+              <label for="fPer">Minutes per paper</label>
+              <div class="dual"><input type="number" id="fPer" min="0.5" max="120" step="0.5" value="6"><input type="range" id="rPer" min="0.5" max="30" step="0.5" aria-label="Minutes per paper slider"></div>
+              <div class="ticks" aria-hidden="true"><span>0.5</span><span>30</span></div>
+            </div>
+            <div class="field" id="totWrap" hidden>
+              <label for="fTot">Total grading minutes</label>
+              <input type="number" id="fTot" min="5" max="2000" step="5" value="180">
+              <span class="hint">Not counting breaks.</span>
+            </div>
+            <div class="field" id="dueWrap" hidden>
+              <label for="fDue">I want to be done by</label>
+              <input type="time" id="fDue" step="300">
+              <span class="hint" id="dueHint">Breaks are subtracted before splitting the time across papers.</span>
+            </div>
+            <div class="field">
+              <label for="fSprint">Sprint length (min)</label>
+              <div class="dual"><input type="number" id="fSprint" min="5" max="120" value="25"><input type="range" id="rSprint" min="5" max="60" step="5" aria-label="Sprint length slider"></div>
+              <div class="ticks" aria-hidden="true"><span>5</span><span>60</span></div>
+            </div>
+            <div class="field">
+              <label for="fBreak">Break length (min)</label>
+              <div class="dual"><input type="number" id="fBreak" min="1" max="60" value="5"><input type="range" id="rBreak" min="1" max="20" step="1" aria-label="Break length slider"></div>
+              <div class="ticks" aria-hidden="true"><span>1</span><span>20</span></div>
+            </div>
+            <div class="field full">
+              <label>Alerts</label>
+              <div class="checks">
+                <label><input type="checkbox" id="fSound" checked> Chime</label>
+                <label><input type="checkbox" id="fFlash" checked> Screen flash</label>
+                <label><input type="checkbox" id="fWarn30" checked> 30-seconds-left chime</label>
+              </div>
+            </div>
+          </div>
+          <div class="preview" aria-live="polite">
+            <div><div class="label">Per paper</div><div class="v" id="pvPer">6:00</div></div>
+            <div><div class="label">Sprints</div><div class="v" id="pvSprints">8</div></div>
+            <div><div class="label">With breaks</div><div class="v" id="pvWall">3:47</div></div>
+            <div><div class="label">Done by</div><div class="v" id="pvFinish">—</div></div>
+          </div>
+          <div class="startrow">
+            <button type="submit" class="btn primary big">Start grading</button>
+            <span class="note">Timer starts on paper 1 right away.</span>
+          </div>
+        </form>
+      </section>
+    </div>
+  </div>
+
+  <!-- SESSION -->
+  <div id="vSession" hidden>
+    <section class="stage" aria-live="off">
+      <div class="stage-top">
+        <div class="paperof" id="paperOf">Paper 1 <small>of 32</small></div>
+        <span class="chip neutral" id="paceChip">On pace</span>
+      </div>
+      <div class="progress" title="Bar: share of the stack graded. Marker: where you should be by now.">
+        <div class="progress-head"><span class="label">Stack progress</span><span class="pct" id="pctText">0%<small>0 of 32 graded</small></span></div>
+        <div class="pbar"><div class="fill" id="paceFill"></div><div class="mark" id="paceMark"></div></div>
+      </div>
+      <div class="clock num" id="clock">6:00</div>
+      <div class="clocksub" id="clockSub">left on this paper</div>
+      <div class="meter" id="meter"><i id="meterFill"></i></div>
+      <div class="banner" id="banner" hidden><span id="bannerText"></span><span id="bannerAct"></span></div>
+
+      <div class="controls" id="ctlGrading">
+        <button class="btn primary big huge" id="nextBtn">Done, next paper <kbd>Space</kbd></button>
+        <button class="btn" id="pauseBtn">Pause <kbd>P</kbd></button>
+        <button class="btn" id="undoBtn">Undo <kbd>U</kbd></button>
+        <button class="btn" id="breakNowBtn">Break now <kbd>B</kbd></button>
+        <button class="btn ghost danger" id="endBtn">End session</button>
+      </div>
+      <div class="controls" id="ctlBreak" hidden>
+        <button class="btn primary big" id="backBtn">Back to grading <kbd>Space</kbd></button>
+        <button class="btn ghost" id="extendBtn">+2 min</button>
+      </div>
+      <div class="controls" id="ctlPaused" hidden>
+        <button class="btn primary big" id="resumeRunBtn">Resume <kbd>P</kbd></button>
+        <button class="btn ghost danger" id="endBtn2">End session</button>
+      </div>
+
+      <div class="stats">
+        <div><div class="label">Sprint</div><div class="v" id="stSprint">1</div><div class="s" id="stSprintSub">25:00 left</div></div>
+        <div><div class="label">Average</div><div class="v" id="stAvg">—</div><div class="s">per paper</div></div>
+        <div><div class="label">Done by</div><div class="v" id="stFinish">—</div><div class="s" id="stFinishSub">at current pace</div></div>
+        <div><div class="label">Graded</div><div class="v" id="stDone">0 / 32</div><div class="s" id="stElapsed">0:00 grading</div></div>
+      </div>
+
+      <div class="stackhead">
+        <div class="label">The stack</div>
+        <div class="adj"><span class="small" style="margin:0">Papers</span><button id="minusBtn" aria-label="Remove a paper from the stack">−</button><button id="plusBtn" aria-label="Add a paper to the stack">+</button></div>
+      </div>
+      <div class="stack" id="stack"></div>
+      <div class="legend">
+        <span><i style="background:var(--good)"></i>On target</span>
+        <span><i style="background:var(--warn)"></i>Up to 1.5× target</span>
+        <span><i style="background:var(--bad)"></i>Over 1.5×</span>
+        <span>Marker on the progress bar = where you should be by now</span>
+      </div>
+      <div class="keys"><span><kbd>Space</kbd> next paper</span><span><kbd>P</kbd> pause</span><span><kbd>U</kbd> undo</span><span><kbd>B</kbd> break</span><span><kbd>F</kbd> full screen</span></div>
+    </section>
+  </div>
+
+  <!-- SUMMARY -->
+  <div id="vSummary" hidden>
+    <section class="panel">
+      <div class="sumhead"><h2 id="sumTitle">Stack done</h2><p id="sumSub"></p></div>
+      <div class="stats" id="sumStats"></div>
+      <div class="chartbox" id="sumChart"></div>
+      <div class="startrow">
+        <button class="btn primary big" id="newBtn">New session</button>
+        <button class="btn" id="copySumBtn">Copy summary</button>
+      </div>
+    </section>
+  </div>
+
+</div>
+
+<script>
+(function(){
+const $ = s => document.querySelector(s);
+const store = {
+  get(k,d){try{const v=localStorage.getItem('gsprint:'+k);return v?JSON.parse(v):d}catch(e){return d}},
+  set(k,v){try{localStorage.setItem('gsprint:'+k,JSON.stringify(v))}catch(e){}},
+  del(k){try{localStorage.removeItem('gsprint:'+k)}catch(e){}}
+};
+
+/* ---------- formatting ---------- */
+function fmt(sec){
+  const neg = sec < 0; sec = Math.abs(Math.round(sec));
+  const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = sec%60;
+  const body = h ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${m}:${String(s).padStart(2,'0')}`;
+  return (neg?'−':'') + body;
+}
+function fmtHM(sec){ sec=Math.round(sec); const h=Math.floor(sec/3600), m=Math.round((sec%3600)/60); return h?`${h}h ${m}m`:`${m}m`; }
+function clockAt(ms){ return new Date(ms).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}); }
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('show'),1600); }
+
+function copyText(text, el){
+  const ok = ()=>{ toast('Copied'); if(el){ el.classList.add('copied'); setTimeout(()=>el.classList.remove('copied'),700);} };
+  const fallback = ()=>{ try{ const ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0'; document.body.append(ta); ta.select(); const r=document.execCommand('copy'); ta.remove(); r?ok():toast('Copy blocked here. Select the text instead.'); }catch(e){ toast('Copy blocked here. Select the text instead.'); } };
+  try{ navigator.clipboard.writeText(text).then(ok, fallback); }catch(e){ fallback(); }
+}
+/* ---------- setup ---------- */
+const F = id => $('#'+id);
+function readSetup(){
+  const papers = Math.max(1, Math.min(400, parseInt(F('fPapers').value)||1));
+  const mode = F('mDue').checked ? 'due' : F('mTot').checked ? 'total' : 'per';
+  const sprintSec = Math.max(5, parseFloat(F('fSprint').value)||25)*60;
+  const breakSec = Math.max(1, parseFloat(F('fBreak').value)||5)*60;
+  let target, due = null, dueErr = '';
+  if(mode==='due'){
+    const d = dueTime();
+    if(!d){ dueErr = 'Pick a time.'; target = 20; }
+    else if(d.err){ dueErr = d.err; target = 20; }
+    else {
+      due = d.ms; const avail = (due - Date.now())/1000;
+      // grading time = available time minus the breaks that grading time will need
+      let grad = avail;
+      for(let i=0;i<8;i++){ const sprints = Math.max(1, Math.ceil(grad/sprintSec)); grad = avail - (sprints-1)*breakSec; if(grad<=0) break; }
+      if(grad < papers*20){ dueErr = `Not enough time: that leaves under 20 seconds a paper.`; target = 20; }
+      else target = grad/papers;
+    }
+  } else {
+    target = mode==='per' ? (parseFloat(F('fPer').value)||6)*60 : ((parseFloat(F('fTot').value)||60)*60)/papers;
+  }
+  target = Math.max(20, target);
+  return { papers, mode, target, due, dueErr, sprintSec, breakSec,
+    sound: F('fSound').checked, flash: F('fFlash').checked, warn30: F('fWarn30').checked };
+}
+function dueTime(){
+  const v = F('fDue').value; if(!v) return null;
+  const [h,m] = v.split(':').map(Number); const d = new Date(); d.setHours(h,m,0,0);
+  let ms = d.getTime(); const now = Date.now();
+  if(ms <= now){ ms += 86400000; if(ms - now > 12*3600000) return {err:'That time has already passed today.'}; }
+  return { ms, tomorrow: new Date(ms).getDate() !== new Date(now).getDate() };
+}
+function defaultDue(){ const d = new Date(Date.now()+2*3600000); d.setMinutes(Math.ceil(d.getMinutes()/15)*15,0,0); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function updatePreview(){
+  const c = readSetup();
+  $('#perWrap').hidden = c.mode!=='per'; $('#totWrap').hidden = c.mode!=='total'; $('#dueWrap').hidden = c.mode!=='due';
+  const hint = $('#dueHint'), startBtn = $('#setupForm button[type=submit]');
+  if(c.mode==='due'){
+    if(c.dueErr){ hint.textContent = c.dueErr; hint.classList.add('err'); }
+    else { const d=dueTime(); hint.classList.remove('err'); hint.textContent = `It's ${clockAt(Date.now())} now, so you have ${fmtHM((c.due-Date.now())/1000)}${d.tomorrow?' (that time is tomorrow)':''}. Breaks come out of that before it's split across papers.`; }
+  }
+  startBtn.disabled = c.mode==='due' && !!c.dueErr;
+  const grad = c.papers*c.target, sprints = Math.max(1,Math.ceil(grad/c.sprintSec)), wall = grad + (sprints-1)*c.breakSec;
+  $('#pvPer').textContent = fmt(c.target); $('#pvSprints').textContent = sprints;
+  $('#pvWall').textContent = fmtHM(wall); $('#pvFinish').textContent = clockAt(Date.now()+wall*1000);
+  store.set('setup', {papers:F('fPapers').value, due:F('fDue').value, mode:c.mode, per:F('fPer').value, tot:F('fTot').value, sprint:F('fSprint').value, brk:F('fBreak').value, sound:c.sound, flash:c.flash, warn30:c.warn30});
+}
+(function restoreSetup(){ const s=store.get('setup',null); if(!s) return;
+  F('fPapers').value=s.papers; if(s.due) F('fDue').value=s.due; (s.mode==='total'?F('mTot'):s.mode==='due'?F('mDue'):F('mPer')).checked=true; F('fPer').value=s.per; F('fTot').value=s.tot; F('fSprint').value=s.sprint; F('fBreak').value=s.brk; F('fSound').checked=!!s.sound; F('fFlash').checked=!!s.flash; if(s.warn30!==undefined) F('fWarn30').checked=!!s.warn30; })();
+if(!F('fDue').value) F('fDue').value = defaultDue();
+const PAIRS=[['fPapers','rPapers'],['fPer','rPer'],['fSprint','rSprint'],['fBreak','rBreak']];
+function syncRanges(){ PAIRS.forEach(([n,r])=>{ F(r).value = F(n).value; }); }
+$('#setupForm').addEventListener('input', e=>{ const pr=PAIRS.find(([n,r])=>e.target.id===r); if(pr) F(pr[0]).value=e.target.value; else if(PAIRS.some(([n])=>e.target.id===n)) syncRanges(); }, true);
+syncRanges();
+$('#setupForm').addEventListener('input', updatePreview);
+$('#setupForm').addEventListener('change', updatePreview);
+setInterval(()=>{ if(!$('#vSetup').hidden) updatePreview(); }, 15000);
+
+
+/* ---------- session engine ---------- */
+let S = null, last = Date.now(), ac = null, wakeLock = null;
+
+function newSession(c){
+  return { ...c, phase:'grading', prevPhase:null, papersDone:[], paperEl:0, gradEl:0, sprintEl:0, sprintNum:1,
+    sprintOver:false, paperAlerted:false, breakLeft:0, breakAlerted:false, breakEl:0, breaks:[], startedAt:Date.now() };
+}
+function saveActive(){ if(S && S.phase!=='done') store.set('active',{S}); }
+
+function audio(){ try{ ac = ac || new (window.AudioContext||window.webkitAudioContext)(); if(ac.state==='suspended') ac.resume(); }catch(e){} }
+function chime(kind){
+  if(!S||!ac) return;
+  if(kind==='warn30'){ if(!S.warn30) return; } else if(!S.sound) return;
+  try{ const notes = kind==='warn30' ? [523] : kind==='break' ? [660,880,1100] : kind==='sprint' ? [880,660,880] : [740,740];
+    notes.forEach((f,i)=>{ const o=ac.createOscillator(), g=ac.createGain(); o.type='sine'; o.frequency.value=f;
+      const t=ac.currentTime+i*0.2; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.3,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+0.4);
+      o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t+0.45); }); }catch(e){}
+}
+function alertUser(kind){
+  chime(kind);
+  if(S.flash){ const f=$('#flash'); f.style.background = kind==='paper' ? 'var(--warn)' : kind==='break' ? 'var(--good)' : 'var(--accent)'; f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
+}
+async function keepAwake(){ try{ if('wakeLock' in navigator && !wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release',()=>{wakeLock=null}); } }catch(e){} }
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible' && S && S.phase!=='done') keepAwake(); });
+
+function tick(){
+  const now = Date.now(); let dt = (now-last)/1000; last = now;
+  if(!S || S.phase==='done' || S.phase==='paused') return;
+  if(dt > 90) dt = 0; // laptop slept: don't count it
+  if(S.phase==='grading'){
+    S.paperEl+=dt; S.gradEl+=dt; S.sprintEl+=dt;
+    if(!S.warned30 && S.target>40 && S.paperEl>=S.target-30 && S.paperEl<S.target){ S.warned30=true; chime('warn30'); }
+    if(!S.paperAlerted && S.paperEl>=S.target){ S.paperAlerted=true; alertUser('paper'); }
+    if(!S.sprintOver && S.sprintEl>=S.sprintSec && (S.papers - S.papersDone.length) > 1){ S.sprintOver=true; alertUser('sprint'); }
+  } else if(S.phase==='break'){
+    S.breakLeft-=dt; S.breakEl+=dt;
+    if(!S.breakAlerted && S.breakLeft<=0){ S.breakAlerted=true; alertUser('break'); }
+  }
+  renderSession();
+  if((tick.n=(tick.n||0)+1)%8===0) saveActive();
+}
+setInterval(tick, 250);
+
+function nextPaper(){
+  if(!S || S.phase!=='grading') return;
+  S.papersDone.push({ t:S.paperEl }); S.paperEl=0; S.paperAlerted=false; S.warned30=false;
+  buildStack();
+  if(S.papersDone.length >= S.papers) return finish();
+  if(S.sprintOver) startBreak();
+  renderSession(); saveActive();
+}
+function undo(){
+  if(!S || S.phase!=='grading' || !S.papersDone.length) return;
+  const p=S.papersDone.pop(); S.paperEl+=p.t; S.paperAlerted = S.paperEl>=S.target; S.warned30 = S.paperEl>=S.target-30; buildStack(); renderSession(); saveActive(); toast('Went back to paper '+(S.papersDone.length+1));
+}
+function startBreak(){ if(!S) return; S.phase='break'; S.breakLeft=S.breakSec; S.breakEl=0; S.breakAlerted=false; renderSession(); saveActive(); }
+function endBreak(){ if(!S||S.phase!=='break') return; S.breaks.push(S.breakEl); S.phase='grading'; S.sprintEl=0; S.sprintOver=false; S.sprintNum++; renderSession(); saveActive(); }
+function togglePause(){
+  if(!S) return;
+  if(S.phase==='paused'){ S.phase=S.prevPhase||'grading'; S.prevPhase=null; last=Date.now(); }
+  else if(S.phase==='grading'||S.phase==='break'){ S.prevPhase=S.phase; S.phase='paused'; }
+  renderSession(); saveActive();
+}
+function adjustTotal(d){ if(!S) return; const min=S.papersDone.length+1; S.papers=Math.max(min, Math.min(400,S.papers+d)); buildStack(); renderSession(); saveActive(); }
+
+function show(view){
+  $('#vSetup').hidden = view!=='setup'; $('#vSession').hidden = view!=='session'; $('#vSummary').hidden = view!=='summary';
+  $('#focusBtn').hidden = view!=='session';
+  if(view!=='session' && document.fullscreenElement){ try{ document.exitFullscreen().catch(()=>{}); }catch(e){} }
+}
+
+function begin(c){
+  audio(); S = newSession(c); last=Date.now(); keepAwake();
+  buildStack(); show('session'); renderSession(); saveActive();
+}
+$('#setupForm').addEventListener('submit', e=>{ e.preventDefault(); const c=readSetup(); if(c.mode==='due' && c.dueErr){ updatePreview(); return; } begin(c); });
+
+/* ---------- session render ---------- */
+function buildStack(){
+  const st=$('#stack'); st.innerHTML='';
+  for(let i=0;i<S.papers;i++){ const s=document.createElement('span'); const p=S.papersDone[i];
+    if(p){ const r=p.t/S.target; s.className = r<=1?'g':r<=1.5?'w':'b'; s.title=`Paper ${i+1}: ${fmt(p.t)}`; }
+    else if(i===S.papersDone.length) { s.className='cur'; s.title='Current paper'; }
+    st.append(s); }
+}
+function projection(){
+  const done=S.papersDone.length, remaining=S.papers-done;
+  const doneTime=S.papersDone.reduce((a,p)=>a+p.t,0);
+  const avg = done ? doneTime/done : S.target;
+  let remGrad = Math.max(0, remaining*avg - Math.min(S.paperEl, avg*0.9));
+  const sprintLeft = Math.max(0, S.sprintSec - S.sprintEl);
+  let breaksLeft = 0, extra = 0;
+  if(S.phase==='break' || (S.prevPhase==='break')){ extra = Math.max(0,S.breakLeft); breaksLeft = remGrad > S.sprintSec ? Math.ceil((remGrad - S.sprintSec)/S.sprintSec) : 0; }
+  else breaksLeft = remGrad > sprintLeft ? Math.ceil((remGrad - sprintLeft)/S.sprintSec) : 0;
+  return { avg, done, doneTime, wall: remGrad + breaksLeft*S.breakSec + extra };
+}
+function renderSession(){
+  if(!S || $('#vSession').hidden) return;
+  const done=S.papersDone.length, cur=Math.min(done+1,S.papers), ph = S.phase==='paused' ? S.prevPhase : S.phase;
+  $('#ctlGrading').hidden = S.phase!=='grading'; $('#ctlBreak').hidden = S.phase!=='break'; $('#ctlPaused').hidden = S.phase!=='paused';
+  $('#undoBtn').disabled = !done;
+  const clock=$('#clock'), meter=$('#meter'), fill=$('#meterFill');
+  clock.className='clock num'; meter.className='meter';
+  let bannerCls='', bannerText='', bannerAct=null;
+
+  if(ph==='break'){
+    $('#paperOf').innerHTML = `Break <small>Up next: paper ${cur} of ${S.papers}</small>`;
+    clock.textContent = fmt(S.breakLeft); clock.classList.add(S.breakLeft<0?'over':'brk');
+    $('#clockSub').textContent = S.breakLeft>=0 ? 'Stand up, stretch, refill your water.' : 'Break is over. Back to the stack.';
+    fill.style.width = Math.min(100, (S.breakEl/S.breakSec)*100)+'%'; meter.classList.add(S.breakLeft<0?'over':'brk');
+    if(S.breakLeft<0){ bannerCls='bad'; bannerText=`Your break ran ${fmt(-S.breakLeft)} over.`; }
+  } else {
+    $('#paperOf').innerHTML = `Paper ${cur} <small>of ${S.papers}</small>`;
+    const left = S.target - S.paperEl;
+    clock.textContent = fmt(left);
+    if(left<0) clock.classList.add('over'); else if(left < Math.min(60,S.target*0.2)) clock.classList.add('near');
+    $('#clockSub').textContent = left>=0 ? `left on this paper (target ${fmt(S.target)})` : `over the ${fmt(S.target)} target. Wrap up this paper.`;
+    fill.style.width = Math.min(100,(S.paperEl/S.target)*100)+'%'; if(left<0) meter.classList.add('over');
+    if(S.sprintOver){ bannerCls='good'; bannerText='Sprint done. Finish this paper and your break starts.'; }
+    else if(left < -S.target*0.5){ bannerCls='bad'; bannerText='This one is running long. Leave one focused comment and move on.'; }
+  }
+  if(S.phase==='paused'){ bannerCls='warn'; bannerText='Paused. The clocks are stopped.'; }
+  const b=$('#banner'); b.hidden=!bannerText; b.className='banner '+bannerCls; $('#bannerText').textContent=bannerText;
+
+  // pace: budget earned on finished papers vs time spent; current paper only counts once it's over target
+  const pj = projection();
+  const bank = done*S.target - pj.doneTime - Math.max(0, S.paperEl - S.target);
+  const chip=$('#paceChip');
+  if(Math.abs(bank) < 15){ chip.className='chip neutral'; chip.textContent='On pace'; }
+  else if(bank>0){ chip.className='chip good'; chip.textContent=fmt(bank)+' ahead'; }
+  else { chip.className = bank < -S.target ? 'chip bad' : 'chip warn'; chip.textContent=fmt(-bank)+' behind'; }
+
+  $('#stSprint').textContent = S.sprintNum;
+  $('#stSprintSub').textContent = ph==='break' ? 'on break' : S.sprintOver ? 'finish this paper' : fmt(Math.max(0,S.sprintSec-S.sprintEl))+' left';
+  $('#stAvg').textContent = done ? fmt(pj.avg) : '—';
+  $('#stFinish').textContent = clockAt(Date.now()+pj.wall*1000);
+  const fin = Date.now()+pj.wall*1000;
+  if(S.due){ const diff=(S.due-fin)/1000; $('#stFinishSub').textContent = Math.abs(diff)<60 ? `goal ${clockAt(S.due)}` : diff>0 ? `${fmtHM(diff)} before your ${clockAt(S.due)} goal` : `${fmtHM(-diff)} past your ${clockAt(S.due)} goal`; }
+  else $('#stFinishSub').textContent = done ? 'at your current pace' : 'at your target pace';
+  $('#stDone').textContent = `${done} / ${S.papers}`;
+  $('#stElapsed').textContent = fmt(S.gradEl)+' grading';
+  $('#paceFill').style.width = (done/S.papers*100)+'%';
+  $('#paceMark').style.left = `calc(${Math.min(100, S.gradEl/(S.target*S.papers)*100)}% - 1.5px)`;
+  $('#pctText').innerHTML = `${Math.round(done/S.papers*100)}%<small>${done} of ${S.papers} graded</small>`;
+  document.title = (ph==='break' ? 'Break '+fmt(S.breakLeft) : fmt(S.target-S.paperEl)+' · '+cur+'/'+S.papers) + ' · Grading Sprints';
+}
+
+/* ---------- finish + summary ---------- */
+function finish(){
+  if(!S) return;
+  if(S.phase==='break') S.breaks.push(S.breakEl);
+  S.phase='done'; S.endedAt=Date.now(); store.del('active');
+  if(wakeLock){ try{ wakeLock.release(); }catch(e){} }
+  document.title='Grading Sprints';
+  renderSummary(); show('summary');
+}
+function median(a){ const s=[...a].sort((x,y)=>x-y), m=Math.floor(s.length/2); return s.length%2?s[m]:(s[m-1]+s[m])/2; }
+let summaryText='';
+function renderSummary(){
+  const ts=S.papersDone.map(p=>p.t), n=ts.length, grad=ts.reduce((a,b)=>a+b,0), wall=(S.endedAt-S.startedAt)/1000;
+  const over=ts.filter(t=>t>S.target).length, brk=S.breaks.reduce((a,b)=>a+b,0);
+  $('#sumTitle').textContent = n>=S.papers ? 'Stack done' : `Stopped at ${n} of ${S.papers}`;
+  $('#sumSub').textContent = `${new Date(S.startedAt).toLocaleDateString([], {weekday:'long',month:'short',day:'numeric'})} · ${clockAt(S.startedAt)} to ${clockAt(S.endedAt)}`;
+  const cells = n ? [
+    ['Papers', `${n}`, n<S.papers?`${S.papers-n} left`:'all graded'],
+    ['Average', fmt(grad/n), `target ${fmt(S.target)}`],
+    ['Median', fmt(median(ts)), `fastest ${fmt(Math.min(...ts))}`],
+    ['Slowest', fmt(Math.max(...ts)), `paper ${ts.indexOf(Math.max(...ts))+1}`],
+    ['Grading time', fmtHM(grad), `${fmtHM(wall)} start to finish`],
+    ['Breaks', `${S.breaks.length}`, fmtHM(brk)+' total'],
+    ['Over target', `${over}`, `${Math.round(over/n*100)}% of papers`],
+    ['Per hour', (3600/(grad/n)).toFixed(1), 'papers per grading hour']
+  ] : [['Papers','0','nothing graded'],['Time',fmtHM(wall),'session length'],['',' ',''],['',' ','']];
+  $('#sumStats').innerHTML = cells.map(c=>`<div><div class="label">${c[0]}</div><div class="v">${c[1]}</div><div class="s">${c[2]}</div></div>`).join('');
+  // chart
+  const box=$('#sumChart'); box.innerHTML='';
+  if(n){
+    const W=Math.max(600,Math.min(n*14,99999)), H=200, pl=44, pr=10, pt=12, pb=26, iw=W-pl-pr, ih=H-pt-pb;
+    const maxV=Math.max(S.target*1.6, ...ts), bw=Math.min(iw/n,48), y=v=>pt+ih-(v/maxV)*ih;
+    let svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Minutes spent on each paper compared with the target"><g>`;
+    const step = maxV>1800?600:maxV>600?120:60;
+    for(let v=0; v<=maxV; v+=step){ svg+=`<line class="gridl" x1="${pl}" x2="${W-pr}" y1="${y(v)}" y2="${y(v)}"/><text class="ctext" x="${pl-6}" y="${y(v)+4}" text-anchor="end">${Math.round(v/60)}m</text>`; }
+    ts.forEach((t,i)=>{ const r=t/S.target, c=r<=1?'bar-g':r<=1.5?'bar-w':'bar-b'; svg+=`<rect class="${c}" x="${pl+i*bw+bw*0.15}" y="${y(t)}" width="${bw*0.7}" height="${pt+ih-y(t)}" rx="2"><title>Paper ${i+1}: ${fmt(t)}</title></rect>`; });
+    const lab = Math.min(10, n); for(let k=0;k<lab;k++){ const i=Math.round(k*(n-1)/Math.max(1,lab-1)); svg+=`<text class="ctext" x="${pl+i*bw+bw/2}" y="${H-8}" text-anchor="middle">${i+1}</text>`; }
+    svg+=`<line class="tline" x1="${pl}" x2="${W-pr}" y1="${y(S.target)}" y2="${y(S.target)}"/><text class="ctext" x="${W-pr}" y="${y(S.target)-5}" text-anchor="end">target ${fmt(S.target)}</text></g></svg>`;
+    box.innerHTML = '<div class="label" style="margin-bottom:6px">Time per paper</div>'+svg;
+  }
+  summaryText = n ? `Graded ${n} papers in ${fmtHM(grad)} of grading (${fmt(grad/n)} avg, target ${fmt(S.target)}). ${over} over target. ${S.breaks.length} breaks.` : 'No papers graded.';
+}
+$('#newBtn').addEventListener('click',()=>{ S=null; updatePreview(); checkResume(); show('setup'); });
+$('#copySumBtn').addEventListener('click',e=>copyText(summaryText, null));
+
+/* ---------- controls + keys ---------- */
+$('#nextBtn').addEventListener('click', nextPaper);
+$('#pauseBtn').addEventListener('click', togglePause);
+$('#resumeRunBtn').addEventListener('click', togglePause);
+$('#undoBtn').addEventListener('click', undo);
+$('#breakNowBtn').addEventListener('click', startBreak);
+$('#backBtn').addEventListener('click', endBreak);
+$('#extendBtn').addEventListener('click',()=>{ if(S&&S.phase==='break'){ S.breakLeft+=120; if(S.breakLeft>0) S.breakAlerted=false; renderSession(); } });
+function armEnd(btn){ btn.addEventListener('click',()=>{ if(btn.dataset.armed){ finish(); btn.dataset.armed=''; btn.textContent='End session'; } else { btn.dataset.armed='1'; btn.textContent='Tap again to end'; setTimeout(()=>{ btn.dataset.armed=''; btn.textContent='End session'; },3000); } }); }
+armEnd($('#endBtn')); armEnd($('#endBtn2'));
+$('#plusBtn').addEventListener('click',()=>adjustTotal(1));
+$('#minusBtn').addEventListener('click',()=>adjustTotal(-1));
+function toggleFocus(){
+  const on = !document.fullscreenElement;
+  try{ if(on && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{}); else if(!on && document.fullscreenElement) document.exitFullscreen().catch(()=>{}); }catch(e){}
+}
+$('#focusBtn').addEventListener('click', toggleFocus);
+
+document.addEventListener('keydown', e=>{
+  if(!S || $('#vSession').hidden) return;
+  const tag=(e.target.tagName||'').toLowerCase(); if(tag==='input'||tag==='textarea'||tag==='select') return;
+  if(e.metaKey||e.ctrlKey||e.altKey) return;
+  const k=e.key.toLowerCase();
+  if(k===' '||k==='enter'){ e.preventDefault(); if(S.phase==='grading') nextPaper(); else if(S.phase==='break') endBreak(); else if(S.phase==='paused') togglePause(); }
+  else if(k==='p'){ togglePause(); }
+  else if(k==='u'){ undo(); }
+  else if(k==='b'){ if(S.phase==='grading') startBreak(); }
+  else if(k==='f'){ toggleFocus(); }
+});
+
+/* ---------- resume an interrupted session ---------- */
+function checkResume(){
+  const a=store.get('active',null);
+  if(a && a.S && a.S.phase!=='done'){ $('#resumeBox').hidden=false; $('#resumeText').textContent=`Paper ${a.S.papersDone.length+1} of ${a.S.papers} · ${fmt(a.S.gradEl)} graded so far`; }
+  else $('#resumeBox').hidden=true;
+}
+$('#resumeBtn').addEventListener('click',()=>{ const a=store.get('active',null); if(!a) return; audio(); S=a.S;
+  if(S.phase!=='paused'){ S.prevPhase=S.phase; S.phase='paused'; } last=Date.now(); keepAwake(); buildStack(); show('session'); renderSession(); });
+$('#discardBtn').addEventListener('click',()=>{ store.del('active'); checkResume(); toast('Discarded'); });
+window.addEventListener('pagehide', saveActive);
+
+/* ---------- boot ---------- */
+updatePreview(); checkResume(); show('setup');
+})();
+</script>
+
+</body></html>
