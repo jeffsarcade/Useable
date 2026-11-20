@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sentence Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Layout idea: one sheet of ruled paper holds the sentence; highlighter colors mark each added part; controls sit below and never move. */
+  --paper: #eef1f6;
+  --sheet: #ffffff;
+  --ink: #16203a;
+  --muted: #586380;
+  --line: #d3d9e5;
+  --accent: #2242cf;
+  --on-accent: #ffffff;
+  --margin-rule: #e58a9a;
+  --good: #17734a;
+  --bad: #b3261e;
+  --hl-s: 92%;
+  --hl-l: 83%;
+  --dot-s: 78%;
+  --dot-l: 44%;
+  --comp-bg: #dfe3ec;
+  --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --font-sentence: "Source Serif 4", "Iowan Old Style", Georgia, serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --paper: #0e1320;
+    --sheet: #161c2e;
+    --ink: #e9ecf5;
+    --muted: #9ba5bd;
+    --line: #2b3450;
+    --accent: #93a6ff;
+    --on-accent: #0e1320;
+    --margin-rule: #8a4352;
+    --good: #6fd3a2;
+    --bad: #ff9a8f;
+    --hl-s: 58%;
+    --hl-l: 27%;
+    --dot-s: 72%;
+    --dot-l: 64%;
+    --comp-bg: #2a3350;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #0e1320;
+  --sheet: #161c2e;
+  --ink: #e9ecf5;
+  --muted: #9ba5bd;
+  --line: #2b3450;
+  --accent: #93a6ff;
+  --on-accent: #0e1320;
+  --margin-rule: #8a4352;
+  --good: #6fd3a2;
+  --bad: #ff9a8f;
+  --hl-s: 58%;
+  --hl-l: 27%;
+  --dot-s: 72%;
+  --dot-l: 64%;
+  --comp-bg: #2a3350;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 16px;
+  line-height: 1.45;
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.wrap {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 20px 16px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
+h1 {
+  margin: 0;
+  font-size: clamp(1.7rem, 5vw, 2.4rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.tabs { display: flex; border: 1.5px solid var(--ink); border-radius: 999px; padding: 3px; gap: 3px; }
+.tabs button {
+  border: 0; background: transparent; border-radius: 999px;
+  padding: 7px 14px; font-weight: 600; font-size: .92rem;
+}
+.tabs button[aria-selected="true"] { background: var(--ink); color: var(--sheet); }
+
+.picker { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.picker .lead { font-size: .8rem; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-right: 4px; }
+.picker button {
+  border: 1.5px solid var(--line); background: var(--sheet); border-radius: 8px;
+  min-width: 38px; height: 38px; padding: 0 8px; font-size: .92rem; font-variant-numeric: tabular-nums;
+}
+.picker button[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--sheet); font-weight: 800; }
+
+/* The sheet */
+.sheet {
+  position: relative;
+  background: var(--sheet);
+  border: 1.5px solid var(--line);
+  border-radius: 6px;
+  padding: 22px 18px 16px 34px;
+}
+.sheet::before {
+  content: ""; position: absolute; top: 0; bottom: 0; left: 20px;
+  width: 1.5px; background: var(--margin-rule);
+}
+.sentence {
+  font-family: var(--font-sentence);
+  font-size: clamp(1.45rem, 4.4vw, 2.25rem);
+  line-height: 1.8;
+  margin: 0;
+  overflow-wrap: break-word;
+}
+.measure { position: absolute; visibility: hidden; pointer-events: none; left: 34px; right: 18px; top: 0; }
+
+.seg {
+  --hue: 0;
+  padding: .06em .14em;
+  border-radius: 5px;
+  cursor: pointer;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  background: hsl(var(--hue) var(--hl-s) var(--hl-l));
+  transition: opacity .2s, background-color .25s;
+}
+.seg.core {
+  background: transparent;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 3px;
+  text-underline-offset: .22em;
+  padding-left: 0; padding-right: 0;
+}
+.seg.t-ic {
+  background: var(--comp-bg);
+  font-weight: 600;
+  text-decoration: underline dashed;
+  text-decoration-thickness: 2px;
+  text-underline-offset: .22em;
+}
+.seg.t-cverb {
+  background: var(--comp-bg);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 3px;
+  text-underline-offset: .22em;
+}
+.seg .join { color: var(--accent); font-weight: 800; }
+.seg.sel { box-shadow: 0 0 0 2px var(--ink); }
+.seg.core.sel { box-shadow: none; text-decoration-color: var(--accent); }
+.seg.enter { animation: ink-in .5s ease-out; }
+.seg.leave { opacity: 0; text-decoration: line-through; }
+@keyframes ink-in {
+  0% { opacity: 0; letter-spacing: -.04em; }
+  60% { opacity: 1; }
+  100% { letter-spacing: 0; }
+}
+/* Spot mode: every part looks the same until found */
+.seg.blind, .seg.core.blind, .seg.t-ic.blind, .seg.t-cverb.blind {
+  background: transparent; font-weight: 400; text-decoration: none; padding-left: 0; padding-right: 0;
+}
+.seg.blind .join { color: inherit; font-weight: inherit; }
+.seg.blind:hover { background: var(--comp-bg); }
+.seg.shake { animation: shake .3s; }
+@keyframes shake { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
+.seg.shake { display: inline-block; }
+
+.t-intro { --hue: 50; } .t-dep { --hue: 22; } .t-app { --hue: 335; } .t-rel { --hue: 270; }
+.t-par { --hue: 130; } .t-adj { --hue: 198; } .t-adv { --hue: 230; } .t-prep { --hue: 168; }
+.t-part { --hue: 88; } .t-inf { --hue: 300; } .t-abs { --hue: 2; }
+
+.status {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px;
+  margin-top: 14px; padding-top: 12px; border-top: 1.5px dashed var(--line);
+  font-size: .92rem; color: var(--muted);
+}
+.status strong {
+  color: var(--ink); font-weight: 800; text-transform: uppercase; letter-spacing: .06em; font-size: .8rem;
+  border: 1.5px solid var(--ink); border-radius: 4px; padding: 2px 7px;
+}
+.status .count { margin-left: auto; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Parts tray */
+.tray-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+h2 { margin: 0; font-size: 1rem; font-weight: 800; letter-spacing: -.01em; }
+.bulk { display: flex; gap: 8px; }
+.bulk button, .card button, .spot button.plain {
+  border: 1.5px solid var(--ink); background: transparent; border-radius: 8px;
+  padding: 6px 12px; font-size: .88rem; font-weight: 600;
+}
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: stretch; }
+.group { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; border: 1.5px dashed var(--line); border-radius: 12px; padding: 4px; }
+.opts { display: inline-flex; flex-wrap: wrap; gap: 4px; padding-right: 4px; }
+.opts button {
+  border: 1.5px solid var(--line); background: var(--sheet); border-radius: 8px;
+  min-height: 36px; padding: 4px 10px; font-size: .88rem; font-weight: 600; white-space: nowrap;
+}
+.opts button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--sheet); }
+.chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  border: 1.5px solid var(--line); background: var(--sheet);
+  border-radius: 10px; padding: 9px 12px 9px 10px;
+  font-weight: 600; font-size: .95rem; min-height: 44px;
+}
+.chip .dot { width: 14px; height: 14px; border-radius: 4px; background: hsl(var(--hue) var(--dot-s) var(--dot-l)); flex: none; }
+.chip.t-ic .dot { background: transparent; border: 2px dashed var(--muted); }
+.chip.t-cverb .dot { background: var(--ink); }
+.chip .sign { font-weight: 800; width: 1ch; text-align: center; color: var(--muted); }
+.chip[aria-pressed="true"] { background: hsl(var(--hue) var(--hl-s) var(--hl-l)); border-color: var(--ink); }
+.chip.t-ic[aria-pressed="true"], .chip.t-cverb[aria-pressed="true"] { background: var(--comp-bg); }
+.chip[aria-pressed="true"] .sign { color: var(--ink); }
+
+/* Explanation card */
+.card {
+  background: var(--sheet); border: 1.5px solid var(--line); border-left: 6px solid var(--ink);
+  border-radius: 6px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;
+}
+.card.typed { border-left-color: hsl(var(--hue) var(--dot-s) var(--dot-l)); }
+.card.t-ic, .card.t-cverb { border-left-color: var(--muted); }
+.card .top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.card h3 { margin: 0; font-size: 1.15rem; font-weight: 800; letter-spacing: -.01em; }
+.card q { font-family: var(--font-sentence); font-size: 1.1rem; quotes: "\201C" "\201D"; }
+.card dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; max-width: 65ch; }
+.card dt { font-size: .74rem; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); padding-top: 3px; }
+.card dd { margin: 0; }
+@media (max-width: 460px) { .card dl { grid-template-columns: 1fr; gap: 2px; } .card dd { margin-bottom: 6px; } }
+
+/* Spot mode */
+.spot { display: flex; flex-direction: column; gap: 10px; }
+.spot .ask { font-size: clamp(1.25rem, 4vw, 1.6rem); font-weight: 800; letter-spacing: -.02em; margin: 0; }
+.spot .fb { min-height: 1.5em; margin: 0; font-weight: 600; }
+.spot .fb.good { color: var(--good); } .spot .fb.bad { color: var(--bad); }
+.spot .row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.spot .progress { color: var(--muted); font-variant-numeric: tabular-nums; }
+.spot button.solid { border: 1.5px solid var(--accent); background: var(--accent); color: var(--on-accent); border-radius: 8px; padding: 6px 12px; font-size: .88rem; font-weight: 600; }
+
+/* Error states */
+.seg.err { text-decoration: underline wavy var(--bad); text-decoration-thickness: 2px; text-underline-offset: .22em; }
+.seg .join.err, .caret { color: var(--bad); font-weight: 800; }
+.opts button.bad { border-style: dashed; border-color: var(--bad); color: var(--bad); }
+.opts button.bad[aria-pressed="true"] { background: var(--bad); border-style: solid; color: var(--sheet); }
+.status strong.bad { color: var(--bad); border-color: var(--bad); }
+
+/* Subject and verb marks */
+.sv { border-radius: 4px; padding: 0 .12em; text-decoration: none; display: inline-block; line-height: 1.25; }
+.sv.s { box-shadow: inset 0 0 0 2px var(--ink); }
+.sv.v { background: var(--ink); color: var(--sheet); }
+.sv::after { font-family: var(--font-display); font-weight: 800; font-size: .42em; vertical-align: super; margin-left: .2em; }
+.sv.s::after { content: "S"; } .sv.v::after { content: "V"; }
+.svbtn { border: 1.5px solid var(--line); background: transparent; border-radius: 999px; padding: 3px 10px; font-size: .82rem; font-weight: 600; color: var(--ink); }
+.svbtn[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--sheet); }
+
+/* Header tools and settings */
+.tools { display: flex; align-items: center; gap: 8px; }
+.gear { border: 1.5px solid var(--ink); background: transparent; border-radius: 999px; width: 38px; height: 38px; font-size: 1.1rem; line-height: 1; }
+.gear[aria-expanded="true"] { background: var(--ink); color: var(--sheet); }
+.settings { background: var(--sheet); border: 1.5px solid var(--ink); border-radius: 8px; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+.settings label { display: flex; gap: 10px; align-items: flex-start; }
+.settings input { margin-top: 4px; width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+.settings small { display: block; color: var(--muted); }
+
+/* Practice */
+.subnav { display: flex; flex-wrap: wrap; gap: 6px; }
+.subnav button { border: 1.5px solid var(--line); background: var(--sheet); border-radius: 8px; padding: 7px 12px; font-size: .92rem; font-weight: 600; }
+.subnav button[aria-pressed="true"] { border-color: var(--ink); box-shadow: 3px 3px 0 var(--ink); }
+.goal { border: 1.5px dashed var(--ink); border-radius: 6px; padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; }
+.goal .eyebrow, .write .eyebrow { font-size: .74rem; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+.goal p { margin: 0; font-family: var(--font-sentence); font-size: clamp(1.05rem, 3vw, 1.3rem); line-height: 1.5; }
+.goal .row, .write .row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.goal .left { font-weight: 800; } .goal .left.done { color: var(--good); }
+.goal button, .write button { border: 1.5px solid var(--ink); background: transparent; border-radius: 8px; padding: 6px 12px; font-size: .88rem; font-weight: 600; }
+.write { display: flex; flex-direction: column; gap: 10px; }
+.write .newcore { font-family: var(--font-sentence); font-size: clamp(1.2rem, 3.6vw, 1.6rem); font-weight: 700; margin: 0; }
+.write textarea { width: 100%; min-height: 6.5em; font-family: var(--font-sentence); font-size: 1.15rem; line-height: 1.5; padding: 10px 12px; border: 1.5px solid var(--ink); border-radius: 6px; background: var(--sheet); color: var(--ink); resize: vertical; }
+.write ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.write li label { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; }
+.write li input { width: 18px; height: 18px; accent-color: var(--accent); }
+.write .dot { width: 12px; height: 12px; border-radius: 3px; background: hsl(var(--hue) var(--dot-s) var(--dot-l)); }
+.write .t-ic .dot, .write .t-cverb .dot { background: var(--muted); }
+.write .note { color: var(--muted); margin: 0; }
+
+/* Presentation view */
+.present .wrap { max-width: 1240px; }
+.present .sentence { font-size: clamp(1.8rem, 5.2vw, 3.5rem); }
+.present .card { font-size: 1.15rem; }
+
+[hidden] { display: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .seg, .seg.enter, .seg.shake { animation: none; transition: none; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Sentence Builder</h1>
+    <div class="tools">
+      <div class="tabs" role="tablist" aria-label="Mode">
+        <button id="tab-build" role="tab" aria-selected="true">Build</button>
+        <button id="tab-practice" role="tab" aria-selected="false">Practice</button>
+      </div>
+      <button class="gear" id="btn-gear" aria-label="Teacher settings" aria-expanded="false" title="Teacher settings">⚙</button>
+    </div>
+  </header>
+
+  <section class="settings" id="settings" hidden aria-label="Teacher settings">
+    <label for="set-errors"><input type="checkbox" id="set-errors"><span>Show error options<small>Adds comma splice and run-on to the joiner choices, and a wrong spot for some participial phrases.</small></span></label>
+    <label for="set-present"><input type="checkbox" id="set-present"><span>Presentation view<small>Larger type for projecting.</small></span></label>
+    <label for="set-predict"><input type="checkbox" id="set-predict"><span>Predict first<small>Tapping a part shows it and waits. Students guess where it goes and how to punctuate it, then you reveal.</small></span></label>
+  </section>
+
+  <div class="picker" id="picker" aria-label="Choose a sentence"><span class="lead">Sentence</span></div>
+
+  <div class="subnav" id="subnav" hidden>
+    <button id="act-spot">Spot the part</button>
+    <button id="act-target">Build to a target</button>
+    <button id="act-write">Your turn</button>
+  </div>
+
+  <section class="goal" id="goal" hidden>
+    <span class="eyebrow">Target sentence</span>
+    <p id="goal-text"></p>
+    <div class="row"><span class="left" id="goal-left"></span><button id="btn-newgoal">New target</button></div>
+  </section>
+
+  <section class="sheet" aria-label="Sentence">
+    <p class="sentence" id="sentence" aria-live="polite"></p>
+    <p class="sentence measure" id="measure" aria-hidden="true"></p>
+    <div class="status" id="status"></div>
+  </section>
+
+  <section id="build-panel">
+    <div class="tray-head">
+      <h2 id="tray-title">Tap a part to add it. Tap again to take it out. Dashed boxes have choices.</h2>
+      <div class="bulk">
+        <button id="btn-strip">Strip to core</button>
+        <button id="btn-all">Add everything</button>
+      </div>
+    </div>
+    <div class="chips" id="chips"></div>
+  </section>
+
+  <section class="card" id="card" aria-live="polite"></section>
+
+  <section class="spot" id="spot-panel" hidden>
+    <p class="ask" id="ask"></p>
+    <p class="fb" id="fb"></p>
+    <div class="row">
+      <span class="progress" id="progress"></span>
+      <button class="plain" id="btn-show">Show me</button>
+      <button class="plain" id="btn-again" hidden>Go again</button>
+      <button class="solid" id="btn-next" hidden>Next sentence</button>
+    </div>
+  </section>
+
+  <section class="write" id="write-panel" hidden>
+    <span class="eyebrow">Your new core</span>
+    <p class="newcore" id="newcore"></p>
+    <p class="note" id="write-note"></p>
+    <ul id="write-parts"></ul>
+    <textarea id="write-text" aria-label="Your sentence" placeholder="Write your sentence here."></textarea>
+    <div class="row"><button id="btn-core">Different core</button><button id="btn-copy">Copy my sentence</button><span class="note" id="copy-msg"></span></div>
+  </section>
+</div>
+
+<script>
+/*LOGIC*/
+const TYPES = {
+  intro: { name: "Introductory phrase", what: "A phrase that sets the scene before the main clause starts. It has no subject and verb of its own.", punct: "Put a comma after it." },
+  dep:   { name: "Dependent clause", what: "A group of words with its own subject and verb that still can't stand alone, because it starts with a word like because, while, although, or unless." },
+  app:   { name: "Appositive", what: "A noun phrase that renames the noun right beside it.", punct: "It is extra information, so it gets a comma on each side." },
+  rel:   { name: "Relative clause", what: "A clause that describes a noun. It starts with who, which, or that." },
+  par:   { name: "Parenthetical", what: "An aside. The writer steps outside the sentence for a moment to comment on it." },
+  adj:   { name: "Adjective", what: "A single word that describes a noun.", punct: "No punctuation needed." },
+  adv:   { name: "Adverb", what: "A single word that describes the verb. It tells how, when, or how often.", punct: "No punctuation needed." },
+  prep:  { name: "Prepositional phrase", what: "A preposition plus its object. It tells where, when, or how.", punct: "No comma when it comes right after what it describes." },
+  part:  { name: "Participial phrase", what: "A phrase built on a verb form (usually ending in -ing or -ed) that works like an adjective.", punct: "Set it off with a comma. The noun it describes must be clear, or the phrase dangles." },
+  inf:   { name: "Infinitive phrase", what: "To plus a verb, along with the words that complete it. It often tells why.", punct: "At the front of the sentence, put a comma after it. At the end, no comma." },
+  abs:   { name: "Absolute phrase", what: "A noun plus a participle, with no full verb. It describes the whole scene instead of a single word.", punct: "Set it off with a comma." },
+  cverb: { name: "Compound verb", what: "A second verb for the same subject, joined with and.", punct: "No comma, because there is no new subject. Compare it with an added independent clause, which brings its own subject and needs a comma." },
+  ic:    { name: "Independent clause", what: "A complete thought with its own subject and verb. It could be a sentence by itself." }
+};
+const JOIN_RULE = {
+  cc: "Comma, then a coordinating conjunction (for, and, nor, but, or, yet, so).",
+  semi: "A semicolon alone can join two closely related independent clauses. No conjunction needed.",
+  ca: "Semicolon before the conjunctive adverb, comma after it.",
+  colon: "A colon works when the second clause explains or completes the first."
+};
+const JOIN_EFFECT = {
+  cc: "The conjunction names the relationship for the reader: addition, contrast, or result.",
+  semi: "The reader has to infer the connection. The two clauses feel tight and balanced.",
+  ca: "The logic is spelled out. This is the most formal choice.",
+  colon: "The first clause makes a promise and the second one pays it off."
+};
+const ERR = {
+  splice: ["Comma splice", "A comma alone is too weak to join two independent clauses.", "Add a conjunction after the comma, switch to a semicolon, or split it into two sentences."],
+  runon: ["Run-on", "Two independent clauses run together with nothing joining them.", "Join them with a comma and conjunction, a semicolon, or a period."],
+  misplaced: ["Misplaced modifier", "The participial phrase sits beside the wrong noun.", "Move the phrase back beside the noun it describes."]
+};
+const NEW_CORES = ["The team lost the game.", "The teacher dropped the marker.", "Rain flooded the street.", "My brother burned the toast.", "The phone buzzed.", "The crowd left the stadium.", "A stranger opened the door.", "The wifi crashed."];
+// Subject and verb inside each clause (and the verb of each compound verb).
+const SV = {
+  "because he loved the game": ["he", "loved"], "the cat watched from the fence": ["cat", "watched"], "that Maya had thrown": ["Maya", "had thrown"],
+  "because her alarm never rang": ["alarm", "rang"], "she walked to school": ["she", "walked"], "her teacher marked her tardy": ["teacher", "marked"],
+  "which sits high on Ridge Road": ["which", "sits"], "the teachers still posted homework": ["teachers", "posted"],
+  "who grew up in Oaxaca": ["who", "grew"], "the whole house smelled like heaven": ["house", "smelled"],
+  "the crowd erupted": ["crowd", "erupted"], "her teammates carried her off the field": ["teammates", "carried"],
+  "although he never said it out loud": ["he", "said"], "he wanted to start in the final game": ["he", "wanted"], "nothing would stop him": ["nothing", "would stop"],
+  "the test was canceled": ["test", "was canceled"], "she slept until noon": ["she", "slept"],
+  "while the class was still taking notes": ["class", ["was", "taking"]], "thirty students bolted for the door": ["students", "bolted"], "Mr. Ortiz kept teaching": ["Ortiz", "kept"],
+  "who had been ignored all morning": ["who", "had been ignored"], "nobody was surprised": ["nobody", "was"],
+  "we all cheered": ["we", "cheered"], "the celebration did not last": ["celebration", ["did", "last"]], "the gas tank was empty": ["tank", "was"],
+  "nobody touches the radio": ["nobody", "touches"], "my sister breaks it every time": ["sister", "breaks"],
+  "even though her friends laughed": ["friends", "laughed"], "she won her first tournament": ["she", "won"],
+  "just as the movie reached its ending": ["movie", "reached"], "we lit some candles": ["we", "lit"], "Grandpa told ghost stories": ["Grandpa", "told"],
+  "it became the best night of the summer": ["it", "became"], "the view was worth every step": ["view", "was"],
+  "and dropped it at her feet": [null, "dropped"], "and saved the game": [null, "saved"], "and drank four cups of coffee": [null, "drank"], "and collapsed on the rocks": [null, "collapsed"]
+};
+const PAR_RULE = {
+  dash: "A pair of dashes makes the interruption loud. At the end of the sentence, the second dash disappears.",
+  paren: "A pair of parentheses makes the aside quiet, like a whisper."
+};
+
+const P = (t, x, extra) => Object.assign({ t, x }, extra);
+const core = x => ({ t: "core", x });
+const adj = (x, note) => ({ t: "adj", x, note });
+const adv = (x, note) => ({ t: "adv", x, note });
+const prep = (x, note) => ({ t: "prep", x, note });
+const front = (t, x, note) => ({ t, x, close: ",", note });
+const wrap = (t, x, note, punct) => ({ t, x, open: ",", close: ",", note, punct });
+const dep = (x, note, o) => Object.assign({ t: "dep", x, note, move: true }, o);
+const par = (x, def, note) => ({ t: "par", x, def, note });
+const ic = (x, joins, note, o) => Object.assign({ t: "ic", x, joins, note }, o);
+const EXTRA = "Commas on both sides. We already know who or what is meant, so this is extra information. Clauses like this usually start with which or who.";
+
+const SENTENCES = [
+  { core: "The dog chased the ball.", subj: "the dog", verb: "chased", segs: [
+    core("the"), adj("scruffy", "Describes the dog."), core("dog"),
+    wrap("app", "a terrier named Moose", "Renames the dog. You could swap it in for “the dog” and the sentence would still work."),
+    adv("happily", "Tells how he chased."), core("chased the ball"),
+    P("rel", "that Maya had thrown", { note: "Tells which ball.", punct: "No commas. The clause identifies which ball, so the sentence needs it. Clauses like this usually start with that." }),
+    prep("across the yard", "Tells where."),
+    P("cverb", "and dropped it at her feet", { note: "The dog does both things: chased and dropped." }),
+    dep("because he loved the game", "Tells why. “He loved the game” is a full thought, but because makes it lean on the main clause.", { def: "back" }),
+    ic("the cat watched from the fence", [["cc", "and"], ["semi"], ["ca", "meanwhile"]], "A new subject (the cat) and a new verb (watched).")
+  ] },
+  { core: "Maya missed the bus.", subj: "Maya", verb: "missed", segs: [
+    core("Maya"), wrap("app", "my older sister", "Renames Maya."), core("missed the"), adj("early", "Describes the bus."), core("bus"),
+    prep("by thirty seconds", "Tells how narrowly she missed it."),
+    par("for the third time this week", "paren", "A side comment from the writer. Lift it out and nothing breaks."),
+    dep("because her alarm never rang", "Tells why she missed it.", { def: "front" }),
+    ic("she walked to school", [["cc", "so"], ["ca", "therefore"], ["semi"]], "Shows the result of missing the bus."),
+    ic("her teacher marked her tardy", [["cc", "and"], ["semi"]], "One more complete thought, with its own subject and verb.")
+  ] },
+  { core: "The storm closed the school.", subj: "the storm", verb: "closed", segs: [
+    P("part", "howling through the valley", { close: ",", note: "Built on howling, and it describes the storm. Whatever noun follows the comma must be the thing doing the howling.",
+      wrong: { before: "ic1", why: "Now the phrase is far from the storm and follows other nouns, so the reader can't tell what is howling." } }),
+    core("the"), adj("sudden", "Describes the storm."), core("storm"),
+    par("and nobody saw it coming", "dash", "The writer interrupts between the subject and the verb."),
+    core("closed the school"),
+    wrap("rel", "which sits high on Ridge Road", "Adds a fact about the school.", EXTRA),
+    prep("for three days", "Tells how long."),
+    ic("the teachers still posted homework", [["cc", "but"], ["ca", "however"], ["semi"]], "A contrast with the first clause.", { key: "ic1" })
+  ] },
+  { core: "My grandmother baked bread.", subj: "my grandmother", verb: "baked", segs: [
+    front("intro", "every Sunday morning", "Tells when."),
+    core("my grandmother"),
+    wrap("rel", "who grew up in Oaxaca", "Adds a fact about the grandmother.", EXTRA),
+    core("baked"), adj("fresh", "Describes the bread."), core("bread"),
+    par("always from memory", "paren", "A quick aside about how she baked."),
+    prep("in a clay oven", "Tells where."),
+    P("inf", "to feed the whole family", { note: "Tells why she baked." }),
+    ic("the whole house smelled like heaven", [["cc", "and"], ["semi"]], "A new subject (the house) and a new verb (smelled).")
+  ] },
+  { core: "The goalie blocked the shot.", subj: "the goalie", verb: "blocked", segs: [
+    front("abs", "her heart pounding", "A noun (heart) plus a participle (pounding). It paints the moment without attaching to one word."),
+    core("the"), adj("nervous", "Describes the goalie."), core("goalie"), adv("somehow", "Tells how she blocked it."),
+    core("blocked the shot"), prep("with one outstretched hand", "Tells how."),
+    P("cverb", "and saved the game", { note: "The goalie does both things: blocked and saved." }),
+    ic("the crowd erupted", [["cc", "and"], ["semi"]], "A new subject (the crowd) and a new verb (erupted)."),
+    ic("her teammates carried her off the field", [["semi"], ["cc", "and"]], "Another complete thought.")
+  ] },
+  { core: "Marcus had one goal.", subj: "Marcus", verb: "had", segs: [
+    core("Marcus"), wrap("app", "the team's quietest player", "Renames Marcus."), core("had one"), adj("simple", "Describes the goal."), core("goal"),
+    prep("for the season", "Tells which stretch of time."),
+    dep("although he never said it out loud", "Sets up a contrast with the main clause.", { def: "front", bo: true }),
+    ic("he wanted to start in the final game", [["colon"], ["semi"]], "This clause tells us what the goal is. That is exactly the job of a colon."),
+    ic("nothing would stop him", [["cc", "and"], ["semi"]], "Another complete thought.")
+  ] },
+  { core: "Priya studied all night.", subj: "Priya", verb: "studied", segs: [
+    front("inf", "to pass the chemistry final", "Tells why she studied."),
+    core("Priya"), par("to her roommate's annoyance", "dash", "The writer interrupts between the subject and the verb."),
+    core("studied all night"), prep("at the kitchen table", "Tells where."),
+    P("cverb", "and drank four cups of coffee", { note: "Priya does both things: studied and drank." }),
+    ic("the test was canceled", [["cc", "but"], ["ca", "however"], ["semi"]], "A contrast with everything before it."),
+    ic("she slept until noon", [["cc", "so"], ["ca", "therefore"]], "Shows a result.")
+  ] },
+  { core: "The bell rang.", subj: "the bell", verb: "rang", segs: [
+    core("the"), adj("final", "Describes the bell."), core("bell rang"),
+    prep("on the last day of school", "Tells when."),
+    dep("while the class was still taking notes", "Tells what else was happening.", { def: "back" }),
+    ic("thirty students bolted for the door", [["cc", "and"], ["semi"]], "A new subject (students) and a new verb (bolted)."),
+    ic("Mr. Ortiz kept teaching", [["cc", "but"], ["ca", "nevertheless"], ["semi"]], "A contrast with the clause before it.")
+  ] },
+  { core: "The cat knocked the glass off the counter.", subj: "the cat", verb: "knocked", segs: [
+    core("the"), adj("orange", "Describes the cat."), core("cat"),
+    wrap("rel", "who had been ignored all morning", "Adds a fact about the cat.", EXTRA),
+    adv("calmly", "Tells how the cat did it."), core("knocked the glass"), P("core", "off the counter", { key: "off" }),
+    P("inf", "to get some attention", { note: "Tells why." }),
+    P("part", "staring directly at its owner", { open: ",", close: ",", note: "Built on staring. It describes the cat, even though it sits at the end of the clause.",
+      wrong: { before: "off", why: "Now the phrase sits right after the glass, so the glass seems to be doing the staring." } }),
+    ic("nobody was surprised", [["cc", "and"], ["semi"]], "A new subject (nobody) and a new verb (was).")
+  ] },
+  { core: "The car started.", subj: "the car", verb: "started", segs: [
+    front("intro", "on the coldest morning of the year", "Tells when."),
+    core("the"), adj("rusty", "Describes the car."), core("car"),
+    wrap("app", "a 1994 pickup", "Renames the car."),
+    adv("finally", "Tells when, with a hint of relief."), core("started"),
+    prep("on the fifth try", "Tells when."),
+    wrap("abs", "its engine rattling", "A noun (engine) plus a participle (rattling). It adds to the whole picture."),
+    ic("we all cheered", [["cc", "and"], ["semi"]], "A new subject (we) and a new verb (cheered)."),
+    ic("the celebration did not last", [["ca", "however"], ["cc", "but"], ["semi"]], "A contrast with the cheering.", { key: "last" }),
+    ic("the gas tank was empty", [["colon"], ["semi"]], "This clause explains why the celebration ended, so a colon fits.", { req: "last" })
+  ] },
+  { core: "Dad has one rule.", subj: "Dad", verb: "has", segs: [
+    core("Dad"), par("and he will remind you", "dash", "The writer interrupts between the subject and the verb."),
+    core("has one"), adj("strict", "Describes the rule."), core("rule"),
+    prep("for road trips", "Tells when the rule applies."),
+    ic("nobody touches the radio", [["colon"], ["semi"]], "This clause states the rule. The first clause promises it, and the colon delivers it."),
+    ic("my sister breaks it every time", [["cc", "but"], ["ca", "however"]], "A contrast.")
+  ] },
+  { core: "Elena joined the debate team.", subj: "Elena", verb: "joined", segs: [
+    core("Elena"), wrap("app", "a shy sophomore", "Renames Elena."),
+    adv("nervously", "Tells how she joined."), core("joined the debate team"),
+    P("inf", "to conquer her fear of public speaking", { note: "Tells why she joined." }),
+    dep("even though her friends laughed", "Sets up a contrast with the main clause.", { def: "front", bo: true }),
+    ic("she won her first tournament", [["cc", "and"], ["ca", "furthermore"], ["semi"]], "Another complete thought about Elena.")
+  ] },
+  { core: "The lights went out.", subj: "the lights", verb: "went out", segs: [
+    core("the lights"), adv("suddenly", "Tells how it happened."), core("went out"),
+    prep("across the whole neighborhood", "Tells where."),
+    dep("just as the movie reached its ending", "Tells exactly when.", { def: "front" }),
+    ic("we lit some candles", [["cc", "so"], ["ca", "therefore"], ["semi"]], "Shows a result."),
+    ic("Grandpa told ghost stories", [["cc", "and"], ["semi"]], "Another complete thought."),
+    ic("it became the best night of the summer", [["semi"], ["cc", "and"]], "One more complete thought. A sentence can keep adding these as long as each is joined correctly.")
+  ] },
+  { core: "The hikers reached the summit.", subj: "the hikers", verb: "reached", segs: [
+    front("abs", "their legs aching", "A noun (legs) plus a participle (aching)."),
+    core("the hikers"), adv("finally", "Tells when."), core("reached the summit"),
+    prep("after nine hours", "Tells when."),
+    P("cverb", "and collapsed on the rocks", { note: "The hikers do both things: reached and collapsed." }),
+    wrap("part", "gasping in the thin air", "Built on gasping. It describes the hikers."),
+    ic("the view was worth every step", [["cc", "but"], ["ca", "nevertheless"], ["semi"]], "A contrast with the exhaustion.")
+  ] }
+];
+SENTENCES.forEach(s => s.segs.forEach(g => { if (g.t === "rel" || g.t === "dep") g.clause = true; }));
+
+// Choices a part offers: where a clause sits, how an aside is wrapped, how a clause is joined.
+// With errs on, the incorrect choices are offered too.
+function choices(g, errs) {
+  if (g.t === "dep" && g.move) return [["front", "Front"], ["back", "Back"]];
+  if (g.t === "par") return [["dash", "— dashes —"], ["paren", "( parentheses )"]];
+  if (g.t === "part" && g.wrong && errs) return [["ok", "Right spot"], ["wrong", "✗ Wrong spot"]];
+  if (g.t === "ic") {
+    const c = g.joins.map((j, n) => [String(n), j[0] === "cc" ? ", " + j[1] : j[0] === "ca" ? "; " + j[1] + "," : j[0] === "semi" ? ";" : ":"]);
+    return errs ? c.concat([["splice", "✗ comma only"], ["runon", "✗ nothing"]]) : c;
+  }
+  return null;
+}
+function choice(sent, opt, i, errs) {
+  const g = sent.segs[i], c = choices(g, errs);
+  if (!c) return null;
+  const v = opt && opt[i];
+  if (v !== undefined && c.some(o => o[0] === v)) return v;
+  return g.def && c.some(o => o[0] === g.def) ? g.def : c[0][0];
+}
+
+// Turns the visible segments into strings, working out commas, dashes, semicolons and the capital letter.
+function compose(sent, on, opt, errs) {
+  let vis = [];
+  sent.segs.forEach((s, i) => {
+    if (s.t !== "core" && !on.has(i)) return;
+    const c = choice(sent, opt, i, errs);
+    const o = { s, i, open: s.open || "", close: s.close || "", join: null, front: false, err: null };
+    if (s.t === "dep" && s.move) { if (c === "front") { o.front = true; o.open = ""; o.close = ","; } else { o.open = s.bo ? "," : ""; o.close = ""; } }
+    if (s.t === "par") { o.open = c === "dash" ? "—" : "("; o.close = c === "dash" ? "—" : ")"; }
+    if (s.t === "part" && c === "wrong") { o.err = "misplaced"; o.open = ","; o.close = ","; }
+    if (s.t === "ic") { if (c === "splice" || c === "runon") { o.join = [c]; o.err = c; } else o.join = s.joins[+c]; }
+    vis.push(o);
+  });
+  vis = vis.filter(o => o.front).concat(vis.filter(o => !o.front));
+  vis.filter(o => o.err === "misplaced").forEach(o => {
+    vis.splice(vis.indexOf(o), 1);
+    const ti = sent.segs.findIndex(x => x.key === o.s.wrong.before);
+    const at = vis.findIndex(v => !v.front && v.i >= ti);
+    vis.splice(at < 0 ? vis.length : at, 0, o);
+  });
+  return vis.map((o, k) => {
+    const prev = vis[k - 1], next = vis[k + 1];
+    const strongNext = next && next.join && next.join[0] !== "cc" && next.join[0] !== "splice";
+    let text = o.s.x, pre = "", post = "", space = k > 0;
+    if (k === 0) text = text.charAt(0).toUpperCase() + text.slice(1);
+    if (k > 0) {
+      const closed = prev.close === "," || prev.close === "—";
+      if (o.join) {
+        const [kind, word] = o.join;
+        if (kind === "cc") { pre = (closed ? "" : ", ") + word + " "; space = closed; }
+        else if (kind === "splice") { pre = closed ? "" : ", "; space = closed; }
+        else if (kind === "runon") { pre = ""; space = true; }
+        else { pre = (kind === "colon" ? ": " : kind === "semi" ? "; " : "; " + word + ", "); space = false; }
+      }
+      else if (o.open === ",") { if (!closed) { pre = ", "; space = false; } }
+      else if (o.open === "(") pre = "(";
+      else if (o.open === "—") pre = "— ";
+    }
+    if (o.close === ",") post = next && !strongNext ? "," : "";
+    else if (o.close === ")") post = ")";
+    else if (o.close === "—") post = next && !strongNext ? " —" : "";
+    return { i: o.i, t: o.s.t, x: o.s.x, pre, text, post, space, join: !!o.join, err: o.err };
+  });
+}
+function plain(sent, on, opt, errs) {
+  return compose(sent, on, opt, errs).map(p => (p.space ? " " : "") + p.pre + p.text + p.post).join("") + ".";
+}
+function classify(sent, on, opt, errs) {
+  const bad = compose(sent, on, opt, errs).find(p => p.err);
+  if (bad) return [ERR[bad.err][0], ERR[bad.err][1], true];
+  const dep = sent.segs.some((s, i) => on.has(i) && s.clause);
+  const n = sent.segs.filter((s, i) => on.has(i) && s.t === "ic").length + 1;
+  const count = ["", "One", "Two", "Three", "Four"][n] + " independent clause" + (n > 1 ? "s" : "");
+  if (dep && n > 1) return ["Compound-complex sentence", count + " and at least one dependent clause."];
+  if (n > 1) return ["Compound sentence", count + ", correctly joined."];
+  if (dep) return ["Complex sentence", "One independent clause plus at least one dependent clause."];
+  return ["Simple sentence", on.size ? "Still one independent clause. Phrases add detail without changing the sentence type." : "One independent clause: a subject and a verb."];
+}
+// How many taps separate a working sentence from the target.
+function distance(sent, goal, work) {
+  const g = new Set(goal.on), w = new Set(work.on);
+  let n = 0;
+  sent.segs.forEach((s, i) => {
+    if (s.t === "core") return;
+    if (g.has(i) !== w.has(i)) n++;
+    else if (g.has(i) && choice(sent, goal.opt, i, false) !== choice(sent, work.opt, i, false)) n++;
+  });
+  return n;
+}
+/*END*/
+
+const $ = id => document.getElementById(id);
+const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+let state;
+const settings = { errors: false, present: false, predict: false };
+try { Object.assign(settings, JSON.parse(localStorage.getItem("sb-settings") || "{}")); } catch (e) {}
+const saveSettings = () => { try { localStorage.setItem("sb-settings", JSON.stringify(settings)); } catch (e) {} };
+
+const cur = () => SENTENCES[state.si];
+const view = () => state.mode === "build" ? "build" : state.act;
+const work = () => view() === "target" ? state.tg.w : state.w[state.si];
+const errs = () => settings.errors && view() === "build";
+const optional = sent => sent.segs.map((g, i) => i).filter(i => sent.segs[i].t !== "core");
+const shuffle = a => { for (let k = a.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [a[k], a[j]] = [a[j], a[k]]; } return a; };
+function label(g, sent) {
+  if (g.t === "ic" && sent) return "Independent clause " + (sent.segs.filter(x => x.t === "ic").indexOf(g) + 2);
+  return TYPES[g.t].name;
+}
+
+// Wraps the subject and verb of a clause in marked spans.
+function marked(text, subj, verb, done) {
+  const hits = [];
+  const find = (w, cls, from) => {
+    if (!w) return from;
+    const m = new RegExp("\\b" + w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i").exec(text.slice(from));
+    if (!m) return from;
+    hits.push([from + m.index, from + m.index + m[0].length, cls]);
+    if (done) done[cls] = true;
+    return from + m.index + m[0].length;
+  };
+  let at = find(subj, "s", 0);
+  [].concat(verb || []).forEach(v => { at = find(v, "v", at); });
+  const out = [];
+  let pos = 0;
+  hits.sort((a, b) => a[0] - b[0]).forEach(([a, b, cls]) => {
+    if (a < pos) return;
+    if (a > pos) out.push(text.slice(pos, a));
+    const sp = document.createElement("span"); sp.className = "sv " + cls; sp.textContent = text.slice(a, b);
+    out.push(sp); pos = b;
+  });
+  out.push(text.slice(pos));
+  return out;
+}
+
+function drawSentence(el, sent, parts, opts = {}) {
+  el.textContent = "";
+  const done = {};
+  parts.forEach(p => {
+    if (p.space) el.append(" ");
+    const sp = document.createElement("span");
+    sp.className = "seg " + (p.t === "core" ? "core" : "t-" + p.t) + (p.err ? " err" : "");
+    sp.dataset.i = p.i;
+    if (p.err === "runon") { const c = document.createElement("span"); c.className = "caret"; c.textContent = "‸ "; c.title = "Nothing joins these clauses"; sp.append(c); }
+    if (p.join && p.pre) { const j = document.createElement("span"); j.className = "join" + (p.err ? " err" : ""); j.textContent = p.pre; sp.append(j); }
+    else if (p.pre) sp.append(p.pre);
+    let body = [p.text];
+    if (opts.sv) {
+      if (p.t === "core") body = marked(p.text, done.s ? null : sent.subj.split(" ").pop(), done.v ? null : sent.verb, done);
+      else if (SV[p.x]) body = marked(p.text, SV[p.x][0], SV[p.x][1]);
+    }
+    sp.append(...body, p.post);
+    if (opts.interactive) { sp.tabIndex = 0; sp.setAttribute("role", "button"); }
+    if (opts.blind && !opts.blind(p)) sp.classList.add("blind");
+    if (opts.sel !== undefined && (opts.sel === p.i || (opts.sel === "core" && p.t === "core"))) sp.classList.add("sel");
+    if (opts.enter === p.i) sp.classList.add("enter");
+    el.append(sp);
+  });
+  el.append(".");
+}
+
+function reserveHeight() {
+  const sent = cur();
+  drawSentence($("measure"), sent, compose(sent, new Set(optional(sent)), {}, false), { sv: state.sv });
+  $("sentence").style.minHeight = $("measure").offsetHeight + "px";
+  $("measure").textContent = "";
+}
+
+function statusLine(strong, text, bad, extras = []) {
+  $("status").textContent = "";
+  if (strong) { const st = document.createElement("strong"); st.textContent = strong; if (bad) st.className = "bad"; $("status").append(st); }
+  const sp = document.createElement("span"); sp.textContent = text;
+  $("status").append(sp, ...extras);
+}
+
+function render(enter) {
+  const sent = cur(), v = view(), build = v === "build";
+  document.body.classList.toggle("present", settings.present);
+  $("tab-build").setAttribute("aria-selected", build);
+  $("tab-practice").setAttribute("aria-selected", !build);
+  $("subnav").hidden = build;
+  ["spot", "target", "write"].forEach(a => $("act-" + a).setAttribute("aria-pressed", state.act === a));
+  $("build-panel").hidden = !(build || v === "target");
+  $("card").hidden = !build;
+  $("spot-panel").hidden = v !== "spot";
+  $("goal").hidden = v !== "target";
+  $("write-panel").hidden = v !== "write";
+  $("picker").querySelectorAll("button").forEach((b, i) => b.setAttribute("aria-pressed", i === state.si));
+
+  if (build) {
+    const w = work(), on = new Set(w.on);
+    drawSentence($("sentence"), sent, compose(sent, on, w.opt, errs()), { interactive: true, sel: state.sel, enter, sv: state.sv });
+    const [type, why, bad] = classify(sent, on, w.opt, errs());
+    const words = plain(sent, on, w.opt, errs()).split(/\s+/).filter(x => /\w/.test(x)).length;
+    const ct = document.createElement("span"); ct.className = "count"; ct.textContent = words + " words";
+    const sv = document.createElement("button"); sv.className = "svbtn"; sv.id = "btn-sv"; sv.textContent = "Subject + verb";
+    sv.setAttribute("aria-pressed", state.sv);
+    sv.addEventListener("click", () => { state.sv = !state.sv; reserveHeight(); render(); });
+    statusLine(type, why, bad, [ct, sv]);
+    $("tray-title").textContent = "Tap a part to add it. Tap again to take it out. Dashed boxes have choices.";
+    renderChips(sent, on, w.opt);
+    renderCard(sent, on, w.opt);
+  } else if (v === "spot") renderSpot(sent);
+  else if (v === "target") renderTarget(sent, enter);
+  else renderWrite(sent);
+}
+
+function renderChips(sent, on, opt) {
+  const box = $("chips"), e = errs();
+  box.textContent = "";
+  optional(sent).forEach(i => {
+    const g = sent.segs[i];
+    const b = document.createElement("button");
+    b.className = "chip t-" + g.t;
+    b.id = "chip-" + i;
+    b.setAttribute("aria-pressed", on.has(i));
+    b.innerHTML = '<span class="dot"></span><span class="lbl"></span><span class="sign" aria-hidden="true"></span>';
+    b.querySelector(".lbl").textContent = label(g, sent);
+    b.querySelector(".sign").textContent = on.has(i) ? "−" : "+";
+    b.addEventListener("click", () => toggle(i));
+    const c = choices(g, e);
+    if (!c) { box.append(b); return; }
+    const grp = document.createElement("div"); grp.className = "group";
+    const os = document.createElement("div"); os.className = "opts"; os.setAttribute("role", "group");
+    os.setAttribute("aria-label", g.t === "ic" ? "Join with" : g.t === "par" ? "Punctuation" : "Position");
+    const now = choice(sent, opt, i, e);
+    c.forEach(([key, text]) => {
+      const ob = document.createElement("button");
+      ob.id = "opt-" + i + "-" + key;
+      ob.textContent = text;
+      if (text.charAt(0) === "✗") ob.className = "bad";
+      ob.setAttribute("aria-pressed", on.has(i) && now === key);
+      ob.addEventListener("click", () => choose(i, key));
+      os.append(ob);
+    });
+    grp.append(b, os);
+    box.append(grp);
+  });
+}
+
+function renderCard(sent, on, opt) {
+  const card = $("card");
+  card.textContent = "";
+  const rows = [];
+  const top = document.createElement("div"); top.className = "top";
+  const h = document.createElement("h3");
+  top.append(h);
+  if (state.sel === "core" || state.sel === undefined) {
+    card.className = "card";
+    h.textContent = "The core (independent clause 1)";
+    rows.push(["Text", null, sent.core],
+      ["What it is", "An independent clause: a subject and a verb that make a complete thought. Subject: " + sent.subj + ". Verb: " + sent.verb + "."],
+      ["Why it matters", "Every part you add hangs on this. Take all of them away and the sentence still stands. Take the core away and it falls apart."]);
+  } else {
+    const g = sent.segs[state.sel], T = TYPES[g.t], c = choice(sent, opt, state.sel, errs());
+    card.className = "card typed t-" + g.t;
+    h.textContent = label(g, sent);
+    const btn = document.createElement("button");
+    if (state.pending === state.sel) {
+      btn.textContent = "Reveal";
+      btn.addEventListener("click", () => { state.pending = null; addPart(state.sel); render(state.sel); });
+      top.append(btn);
+      rows.push(["Text", null, g.x], ["Predict", "Where does this go in the sentence? What punctuation will it need?"]);
+    } else {
+      btn.textContent = on.has(state.sel) ? "Take it out" : "Add it";
+      btn.addEventListener("click", () => toggle(state.sel));
+      top.append(btn);
+      rows.push(["Text", null, g.x], ["What it is", T.what], ["Here", g.note]);
+      const e = c === "splice" || c === "runon" ? c : c === "wrong" ? "misplaced" : null;
+      if (e) {
+        rows.push(["Problem", ERR[e][0] + ". " + (e === "misplaced" ? g.wrong.why : ERR[e][1])], ["Fix", ERR[e][2]]);
+      } else {
+        let punct = g.punct || T.punct, effect = "";
+        if (g.t === "ic") { punct = JOIN_RULE[g.joins[+c][0]]; effect = JOIN_EFFECT[g.joins[+c][0]]; }
+        if (g.t === "par") punct = PAR_RULE[c];
+        if (g.t === "dep" && g.move) {
+          punct = c === "front" ? "It comes first, so a comma marks where the main clause begins."
+            : g.bo ? "After the main clause you usually need no comma. A clause of contrast (although, even though) is the exception." : "It follows the main clause, so no comma is needed.";
+          effect = c === "front" ? "The reader waits for the main clause, so the main point lands last and hits hardest."
+            : "The main point comes first. The clause trails behind as an explanation.";
+        }
+        if (punct) rows.push(["Punctuation", punct]);
+        if (effect) rows.push(["Effect", effect]);
+      }
+    }
+  }
+  card.append(top);
+  const dl = document.createElement("dl");
+  rows.forEach(([k, v, quote]) => {
+    const dt = document.createElement("dt"); dt.textContent = k;
+    const dd = document.createElement("dd");
+    if (quote) { const q = document.createElement("q"); q.textContent = quote; dd.append(q); } else dd.textContent = v;
+    dl.append(dt, dd);
+  });
+  card.append(dl);
+}
+
+function addPart(i) {
+  const sent = cur(), list = work().on, g = sent.segs[i];
+  if (!list.includes(i)) list.push(i);
+  if (g.req) { const r = sent.segs.findIndex(x => x.key === g.req); if (r >= 0 && !list.includes(r)) list.push(r); }
+}
+function toggle(i) {
+  const sent = cur(), w = work();
+  state.sel = i;
+  if (!w.on.includes(i)) {
+    if (settings.predict && view() === "build" && state.pending !== i) { state.pending = i; render(); return; }
+    state.pending = null; addPart(i); render(i); return;
+  }
+  const finish = () => {
+    const g = sent.segs[i];
+    w.on = w.on.filter(j => j !== i && !(g.key && sent.segs[j].req === g.key));
+    render();
+  };
+  const sp = $("sentence").querySelector('[data-i="' + i + '"]');
+  if (sp && !reduce) { sp.classList.add("leave"); setTimeout(finish, 200); } else finish();
+}
+function choose(i, key) {
+  work().opt[i] = key;
+  state.sel = i; state.pending = null;
+  addPart(i);
+  render(i);
+}
+
+/* Practice: spot the part */
+function startSpot() {
+  state.spot = { queue: [...shuffle(optional(cur())), "core"], found: [], fb: "", ok: true };
+}
+function renderSpot(sent) {
+  if (!state.spot) startSpot();
+  const sp = state.spot, found = new Set(sp.found), all = new Set(optional(sent));
+  drawSentence($("sentence"), sent, compose(sent, all, state.w[state.si].opt, false), {
+    interactive: true,
+    blind: p => p.t === "core" ? found.has("core") : found.has(p.i)
+  });
+  statusLine("", "The colors are hidden. Tap the words that match the prompt.");
+  const target = sp.queue[0], total = optional(sent).length + 1, done = target === undefined;
+  let ask;
+  if (done) ask = "You found all " + total + " parts.";
+  else if (target === "core") ask = "Last one. Tap the core of the sentence.";
+  else if (sent.segs[target].t === "ic") ask = "Tap an independent clause that was added to the core.";
+  else ask = "Tap the " + TYPES[sent.segs[target].t].name.toLowerCase() + ".";
+  $("ask").textContent = ask;
+  $("fb").textContent = sp.fb;
+  $("fb").className = "fb " + (sp.ok ? "good" : "bad");
+  $("progress").textContent = sp.found.length + " of " + total + " found";
+  $("btn-show").hidden = done;
+  $("btn-again").hidden = !done;
+  $("btn-next").hidden = !done;
+}
+function spotTap(i, el) {
+  const sp = state.spot, sent = cur(), target = sp.queue[0];
+  if (target === undefined) return;
+  const g = sent.segs[i];
+  const already = g.t === "core" ? sp.found.includes("core") : sp.found.includes(i);
+  const hit = !already && (target === "core" ? g.t === "core" : g.t === sent.segs[target].t);
+  if (hit) {
+    const id = target === "core" ? "core" : i;
+    sp.queue.splice(sp.queue.indexOf(id), 1);
+    sp.found.push(id);
+    sp.fb = target === "core" ? "Yes. " + sent.core + " Everything else hangs on it." : "Yes. " + (g.note || "");
+    sp.ok = true;
+    render();
+  } else {
+    sp.fb = already ? "You already found that one." : "Not that one. Look again.";
+    sp.ok = false;
+    $("fb").textContent = sp.fb; $("fb").className = "fb bad";
+    if (!reduce) { el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake"); }
+  }
+}
+
+/* Practice: build to a target */
+function newTarget() {
+  const sent = cur(), ids = shuffle(optional(sent));
+  const on = ids.slice(0, Math.min(ids.length, 3 + Math.floor(Math.random() * 3)));
+  on.slice().forEach(i => { const g = sent.segs[i]; if (g.req) { const r = sent.segs.findIndex(x => x.key === g.req); if (!on.includes(r)) on.push(r); } });
+  const opt = {};
+  on.forEach(i => { const c = choices(sent.segs[i], false); if (c) opt[i] = c[Math.floor(Math.random() * c.length)][0]; });
+  state.tg = { goal: { on, opt }, w: { on: [], opt: {} } };
+}
+function renderTarget(sent, enter) {
+  if (!state.tg) newTarget();
+  const { goal, w } = state.tg, on = new Set(w.on);
+  drawSentence($("sentence"), sent, compose(sent, on, w.opt, false), { interactive: false, enter });
+  $("goal-text").textContent = plain(sent, new Set(goal.on), goal.opt, false);
+  const n = distance(sent, goal, w);
+  $("goal-left").textContent = n === 0 ? "Matched. You built it." : n === 1 ? "1 change to go" : n + " changes to go";
+  $("goal-left").className = "left" + (n === 0 ? " done" : "");
+  statusLine("", "Start from the core and build the target. Check the order and the punctuation.");
+  $("tray-title").textContent = "Add parts and pick positions and joiners until your sentence matches the target.";
+  renderChips(sent, on, w.opt);
+}
+
+/* Practice: your turn */
+function renderWrite(sent) {
+  const w = state.w[state.si], on = new Set(w.on), wr = state.write;
+  drawSentence($("sentence"), sent, compose(sent, on, w.opt, false), {});
+  statusLine("Model", on.size ? "This is the sentence you built. Use it as your pattern." : "Go to Build and add some parts to this sentence first. Then come back.");
+  $("newcore").textContent = NEW_CORES[wr.core % NEW_CORES.length];
+  $("write-note").textContent = on.size ? "Grow this core with the same parts as the model. Check each one off as you use it." : "";
+  const ul = $("write-parts");
+  ul.textContent = "";
+  optional(sent).filter(i => on.has(i)).forEach(i => {
+    const g = sent.segs[i], li = document.createElement("li"), lab = document.createElement("label"), cb = document.createElement("input");
+    li.className = "t-" + g.t;
+    cb.type = "checkbox"; cb.id = "wr-" + i; cb.checked = !!wr.checks[state.si + "-" + i];
+    cb.addEventListener("change", () => { wr.checks[state.si + "-" + i] = cb.checked; });
+    lab.htmlFor = cb.id;
+    const dot = document.createElement("span"); dot.className = "dot";
+    lab.append(cb, dot, TYPES[g.t].name);
+    li.append(lab); ul.append(li);
+  });
+  if ($("write-text").value !== wr.text) $("write-text").value = wr.text;
+  $("copy-msg").textContent = "";
+}
+
+/* Events */
+function segEvent(e) {
+  const el = e.target.closest(".seg");
+  if (!el) return;
+  if (e.type === "keydown") { if (e.key !== "Enter" && e.key !== " ") return; e.preventDefault(); }
+  const i = +el.dataset.i, g = cur().segs[i], v = view();
+  if (v === "spot") return spotTap(i, el);
+  if (v !== "build") return;
+  state.sel = g.t === "core" ? "core" : i; state.pending = null;
+  render();
+}
+$("sentence").addEventListener("click", segEvent);
+$("sentence").addEventListener("keydown", segEvent);
+$("tab-build").addEventListener("click", () => { state.mode = "build"; render(); });
+$("tab-practice").addEventListener("click", () => { state.mode = "practice"; state.spot = null; render(); });
+["spot", "target", "write"].forEach(a => $("act-" + a).addEventListener("click", () => { state.act = a; state.spot = null; render(); }));
+$("btn-strip").addEventListener("click", () => { work().on = []; state.sel = "core"; state.pending = null; render(); });
+$("btn-all").addEventListener("click", () => { work().on = optional(cur()); state.pending = null; render(); });
+$("btn-show").addEventListener("click", () => {
+  const sp = state.spot, sent = cur(), t = sp.queue.shift();
+  sp.found.push(t);
+  sp.fb = t === "core" ? "The core is: " + sent.core : "Here it is: " + sent.segs[t].x + ".";
+  sp.ok = true; render();
+});
+$("btn-again").addEventListener("click", () => { state.spot = null; render(); });
+$("btn-next").addEventListener("click", () => pick((state.si + 1) % SENTENCES.length));
+$("btn-newgoal").addEventListener("click", () => { newTarget(); render(); });
+$("write-text").addEventListener("input", e => { state.write.text = e.target.value; });
+$("btn-core").addEventListener("click", () => { state.write.core++; render(); });
+$("btn-copy").addEventListener("click", () => {
+  const done = ok => { $("copy-msg").textContent = ok ? "Copied." : "Copy didn't work here. Select the text and copy it yourself."; };
+  try { navigator.clipboard.writeText(state.write.text).then(() => done(true), () => done(false)); } catch (e) { done(false); }
+});
+$("btn-gear").addEventListener("click", () => {
+  const open = $("settings").hidden;
+  $("settings").hidden = !open;
+  $("btn-gear").setAttribute("aria-expanded", open);
+});
+["errors", "present", "predict"].forEach(k => {
+  $("set-" + k).checked = settings[k];
+  $("set-" + k).addEventListener("change", e => { settings[k] = e.target.checked; state.pending = null; saveSettings(); render(); reserveHeight(); });
+});
+function pick(i) { state.si = i; state.sel = "core"; state.pending = null; state.spot = null; state.tg = null; reserveHeight(); render(); }
+
+let rz;
+window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(reserveHeight, 150); });
+
+function start(saved) {
+  state = { si: 0, w: SENTENCES.map(() => ({ on: [], opt: {} })), mode: "build", act: "spot", sel: "core", sv: false, pending: null, spot: null, tg: null, write: { core: 0, text: "", checks: {} } };
+  if (saved && Array.isArray(saved.w) && saved.w.length === SENTENCES.length) {
+    state.si = Math.min(saved.si | 0, SENTENCES.length - 1); state.w = saved.w; state.sv = !!saved.sv;
+    state.mode = saved.mode === "practice" ? "practice" : "build";
+    if (["spot", "target", "write"].includes(saved.act)) state.act = saved.act;
+    if (saved.write) state.write = saved.write;
+  }
+  SENTENCES.forEach((s, i) => {
+    const b = document.createElement("button");
+    b.id = "pick-" + i;
+    b.textContent = i + 1;
+    b.title = s.core;
+    b.setAttribute("aria-label", "Sentence " + (i + 1) + ": " + s.core);
+    b.addEventListener("click", () => pick(i));
+    $("picker").append(b);
+  });
+  document.body.classList.toggle("present", settings.present);
+  reserveHeight();
+  render();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(reserveHeight);
+}
+window.claude?.hot?.snapshot?.(() => ({ si: state.si, w: state.w, mode: state.mode, act: state.act, sv: state.sv, write: state.write }));
+if (window.claude?.hot?.ready) window.claude.hot.ready(start); else start(window.claude?.hot?.data ?? {});
+</script>
+</body>
+</html>
